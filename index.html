@@ -36,7 +36,7 @@
   button{font-family:'Inter',sans-serif;cursor:pointer;}
   input,select{font-family:'Inter',sans-serif;}
 
-
+  /* ---------- App Shell ---------- */
   .app{max-width:960px;margin:0 auto;padding:28px 20px 80px;}
   .topline{
     display:flex;justify-content:space-between;align-items:baseline;
@@ -47,7 +47,7 @@
   .subnav{display:flex;gap:18px;font-size:13px;color:var(--sage);}
   .subnav b{color:var(--cream);border-bottom:2px solid var(--amber);padding-bottom:2px;}
 
-
+  /* ---------- Setup Wizard ---------- */
   .clipboard{
     background:var(--cream);color:var(--ink);
     border:1px solid var(--line-dark);
@@ -88,7 +88,7 @@
   .team-list-title{font-size:14px;font-weight:600;margin:18px 0 8px;color:#333;}
   .helptext{font-size:12px;color:#777;margin-top:-10px;margin-bottom:16px;}
 
-
+  /* ---------- Live Scorer ---------- */
   .board{
     background:var(--ink);border:1px solid #2a2f31;
     padding:0;margin-bottom:24px;
@@ -147,7 +147,7 @@
   .modal .field select, .modal .field input{width:100%;padding:9px;border:1px solid #ccc7b8;}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
 
-
+  /* ---------- Viewer Scorecard ---------- */
   .paper{background:var(--cream);color:var(--ink);padding:30px 34px;margin-bottom:20px;}
   .paper h3{margin:0 0 14px;font-size:18px;border-bottom:2px solid var(--ink);padding-bottom:8px;}
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
@@ -197,9 +197,17 @@ function generateMatchCode(){
   return s;
 }
 
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* Fields that are the shared "match record" — everything a viewer needs. */
 function buildSyncPayload(){
   return {
     admin_uid: firebase.auth().currentUser ? firebase.auth().currentUser.uid : null,
+    scorer_password_hash: state.scorerPasswordHash || null,
     format: state.format, maxOvers: state.maxOvers, venue: state.venue,
     pitch: state.pitch, weather: state.weather,
     teamA: state.teamA, teamB: state.teamB,
@@ -223,15 +231,39 @@ function applyRemoteState(data){
   Object.assign(state, data, preserve);
   render();
 }
-function connectMatch(role, code){
+function connectMatch(role, code, password){
   state.connecting = true;
+  state.connectError = null;
   render();
-  firebase.auth().signInAnonymously().then(()=>{
+  firebase.auth().signInAnonymously().then(async ()=>{
+    const ref = db.ref('matches/' + code);
+
+    if(role==='admin'){
+      if(!password){
+        state.connecting = false;
+        state.connectError = 'Set a password to protect this match as its scorer.';
+        render();
+        return;
+      }
+      const snap = await ref.once('value');
+      const existing = snap.val();
+      const enteredHash = await hashPassword(password);
+      if(existing && existing.scorer_password_hash){
+        if(enteredHash !== existing.scorer_password_hash){
+          state.connecting = false;
+          state.connectError = 'Incorrect scorer password for this match code.';
+          render();
+          return;
+        }
+      }
+      state.scorerPasswordHash = enteredHash;
+    }
+
     state.role = role;
     state.matchCode = code;
     state.connected = true;
     state.connecting = false;
-    syncRef = db.ref('matches/' + code);
+    syncRef = ref;
     if(role==='viewer'){
       state.view = 'scorer';
       syncRef.on('value', snap=>{
@@ -249,14 +281,19 @@ function connectMatch(role, code){
   });
 }
 
-
+/* =========================================================
+   STATE
+   ========================================================= */
 let state = {
-  role: null,     
+  role: null,             // 'admin' | 'viewer'
   matchCode: null,
   connected: false,
   connecting: false,
+  connectError: null,
   tempRole: 'admin',
   tempCode: generateMatchCode(),
+  tempPassword: '',
+  scorerPasswordHash: null,
   view: 'setup',
   step: 1,
   format: 'T20',
@@ -316,7 +353,9 @@ function freshInnings(battingTeam, bowlingTeam, target){
   };
 }
 
-
+/* =========================================================
+   ENGINE HELPERS
+   ========================================================= */
 function currentInnings(){ return state.innings[state.currentInnings]; }
 
 function teamById(id){
@@ -405,7 +444,7 @@ function undo(){
   render();
 }
 
-
+/* ---- core delivery logic ---- */
 function recordDelivery(partial){
   const inn = currentInnings();
   const legal = partial.legal;
@@ -590,7 +629,9 @@ function maybeEndInnings(){
   }
 }
 
-
+/* =========================================================
+   RENDER
+   ========================================================= */
 function render(){
   const app = document.getElementById('app');
   app.innerHTML = '';
@@ -616,7 +657,7 @@ function renderConnectGate(){
   wrap.appendChild(el('h2','Join a match'));
   wrap.appendChild(fieldChoice('I am the...', ['Scorer (Admin)','Viewer'],
     state.tempRole==='admin' ? 'Scorer (Admin)' : 'Viewer',
-    v=>{ state.tempRole = v==='Scorer (Admin)' ? 'admin' : 'viewer'; render(); }));
+    v=>{ state.tempRole = v==='Scorer (Admin)' ? 'admin' : 'viewer'; state.connectError=null; render(); }));
 
   const codeField = el('div','field');
   codeField.appendChild(el('label','', state.tempRole==='admin'
@@ -628,9 +669,23 @@ function renderConnectGate(){
   codeField.appendChild(codeInput);
   wrap.appendChild(codeField);
 
+  if(state.tempRole==='admin'){
+    const pwField = el('div','field');
+    pwField.appendChild(el('label','','Scorer password — set this the first time, then re-enter it to resume scoring'));
+    const pwInput = el('input');
+    pwInput.type='password'; pwInput.value=state.tempPassword; pwInput.placeholder='Only you (and whoever you tell) should know this';
+    pwInput.oninput = e=>{ state.tempPassword = e.target.value; };
+    pwField.appendChild(pwInput);
+    wrap.appendChild(pwField);
+  }
+
   wrap.appendChild(el('div','helptext', state.tempRole==='admin'
-    ? 'This code links your scorer device to every viewer watching. Share it before you start scoring.'
+    ? 'Viewers only ever need the match code, never this password — that keeps them from accidentally landing in scoring mode.'
     : 'Your screen updates automatically after every ball the scorer logs.'));
+
+  if(state.connectError){
+    wrap.appendChild(el('div','helptext', '<span style="color:var(--red);font-weight:600;">'+state.connectError+'</span>'));
+  }
 
   const actions = el('div','wizard-actions');
   actions.appendChild(el('div'));
@@ -638,7 +693,7 @@ function renderConnectGate(){
   connectBtn.disabled = state.connecting;
   connectBtn.onclick = ()=>{
     const code = (state.tempCode || generateMatchCode()).trim().toUpperCase();
-    connectMatch(state.tempRole, code);
+    connectMatch(state.tempRole, code, state.tempPassword);
   };
   actions.appendChild(connectBtn);
   wrap.appendChild(actions);
@@ -681,7 +736,7 @@ function renderTopline(){
   return wrap;
 }
 
-
+/* ---------------- SETUP WIZARD ---------------- */
 function renderSetup(){
   const wrap = el('div','clipboard');
   const step = state.step;
@@ -844,7 +899,7 @@ function playerSelectField(label, players, value, onChange){
   return f;
 }
 
-
+/* ---------------- LIVE SCORER ---------------- */
 function renderScorer(){
   const inn = currentInnings();
   const frag = el('div');
@@ -983,7 +1038,7 @@ function renderScorer(){
   return frag;
 }
 
-
+/* ---------------- MODALS ---------------- */
 function renderModal(){
   const backdrop = el('div','modal-backdrop');
   const m = el('div','modal');
@@ -1135,7 +1190,7 @@ function renderModal(){
   return backdrop;
 }
 
-
+/* ---------------- VIEWER SCORECARD ---------------- */
 function renderViewer(){
   const frag = el('div');
   state.innings.forEach((inn, idx)=>{
