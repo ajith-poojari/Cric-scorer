@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root{
     --turf: #122318;
@@ -196,6 +197,61 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 let syncRef = null;
 
+function buildJoinUrl(code){
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.searchParams.set('code', code);
+  return url.toString();
+}
+function attachQRCodes(){
+  document.querySelectorAll('[data-qr]').forEach(elNode=>{
+    const text = elNode.getAttribute('data-qr');
+    const size = parseInt(elNode.getAttribute('data-qr-size') || '140');
+    elNode.innerHTML = '';
+    if(window.QRCode){
+      new QRCode(elNode, { text, width: size, height: size, colorDark:'#14181A', colorLight:'#F4F1E6', correctLevel: QRCode.CorrectLevel.M });
+    }
+  });
+}
+
+async function loadSavedRosters(){
+  if(!firebase.auth().currentUser){ state.savedRosters = []; render(); return; }
+  try{
+    const uid = firebase.auth().currentUser.uid;
+    const snap = await db.ref('rosters/'+uid).once('value');
+    const data = snap.val() || {};
+    state.savedRosters = Object.keys(data).map(id=>Object.assign({id}, data[id]));
+    render();
+  }catch(e){
+    console.error('Failed to load saved rosters:', e);
+    state.savedRosters = [];
+    render();
+  }
+}
+async function saveRoster(teamKey, name){
+  const team = getTeam(teamKey);
+  const uid = firebase.auth().currentUser ? firebase.auth().currentUser.uid : null;
+  if(!uid) return;
+  const payload = {
+    name: name || team.name || 'Unnamed roster',
+    players: team.players, substitutes: team.substitutes,
+    savedAt: Date.now()
+  };
+  const ref = db.ref('rosters/'+uid).push();
+  await ref.set(payload);
+  state.savedRosters = null;
+  render();
+}
+function applyRoster(teamKey, rosterId){
+  const roster = (state.savedRosters||[]).find(r=>r.id===rosterId);
+  if(!roster) return;
+  const team = getTeam(teamKey);
+  team.name = roster.name;
+  team.players = JSON.parse(JSON.stringify(roster.players));
+  team.substitutes = JSON.parse(JSON.stringify(roster.substitutes));
+  render();
+}
+
 function generateMatchCode(){
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = '';
@@ -296,6 +352,9 @@ let state = {
   connected: false,
   connecting: false,
   connectError: null,
+  showQrModal: false,
+  savedRosters: null,
+  tempRosterSaveName: { A:'', B:'' },
   tempRole: 'admin',
   tempCode: generateMatchCode(),
   tempPassword: '',
@@ -655,6 +714,29 @@ function render(){
     if(state.view==='viewer') app.appendChild(renderViewer());
   }
   if(state.modal) app.appendChild(renderModal());
+  if(state.showQrModal) app.appendChild(renderQrModal());
+  attachQRCodes();
+}
+
+function renderQrModal(){
+  const backdrop = el('div','modal-backdrop');
+  const m = el('div','modal');
+  m.style.textAlign = 'center';
+  m.appendChild(el('h3','Scan to join as a viewer'));
+  const qrBox = el('div');
+  qrBox.setAttribute('data-qr', buildJoinUrl(state.matchCode));
+  qrBox.setAttribute('data-qr-size','200');
+  qrBox.style.background = '#fff'; qrBox.style.display = 'inline-block'; qrBox.style.padding = '10px';
+  m.appendChild(qrBox);
+  m.appendChild(el('div','helptext','Or share the code: <b>'+state.matchCode+'</b>'));
+  const actions = el('div','modal-actions');
+  actions.style.justifyContent = 'center';
+  const closeBtn = el('button','btn btn-primary','Close');
+  closeBtn.onclick = ()=>{ state.showQrModal = false; render(); };
+  actions.appendChild(closeBtn);
+  m.appendChild(actions);
+  backdrop.appendChild(m);
+  return backdrop;
 }
 
 function renderConnectGate(){
@@ -683,6 +765,15 @@ function renderConnectGate(){
     pwInput.oninput = e=>{ state.tempPassword = e.target.value; };
     pwField.appendChild(pwInput);
     wrap.appendChild(pwField);
+
+    const qrField = el('div','field');
+    qrField.appendChild(el('label','','Viewers can scan this instead of typing the code'));
+    const qrBox = el('div');
+    qrBox.setAttribute('data-qr', buildJoinUrl(state.tempCode));
+    qrBox.setAttribute('data-qr-size','120');
+    qrBox.style.background = '#fff'; qrBox.style.display = 'inline-block'; qrBox.style.padding = '8px';
+    qrField.appendChild(qrBox);
+    wrap.appendChild(qrField);
   }
 
   wrap.appendChild(el('div','helptext', state.tempRole==='admin'
@@ -724,7 +815,13 @@ function renderTopline(){
   const wrap = el('div','topline');
   const brandWrap = el('div');
   brandWrap.appendChild(el('div','brand','SCOREBOARD <span>·</span> live cricket scorer'));
-  brandWrap.appendChild(el('div','', '<span style="font-size:11px;color:var(--sage);">Match '+state.matchCode+' · '+(state.role==='admin'?'Scorer':'Viewer')+'</span>'));
+  const badgeLine = el('div','', '<span style="font-size:11px;color:var(--sage);">Match '+state.matchCode+' · '+(state.role==='admin'?'Scorer':'Viewer')+'</span>');
+  if(state.role==='admin'){
+    const qrLink = el('span','', ' <span style="font-size:11px;color:var(--amber);cursor:pointer;text-decoration:underline;">Show join QR</span>');
+    qrLink.onclick = ()=>{ state.showQrModal = true; render(); };
+    badgeLine.appendChild(qrLink);
+  }
+  brandWrap.appendChild(badgeLine);
   wrap.appendChild(brandWrap);
   const nav = el('div','subnav');
   const items = state.role==='viewer'
@@ -770,6 +867,43 @@ function renderSetup(){
     ['A','B'].forEach(key=>{
       const team = getTeam(key);
       wrap.appendChild(fieldTextInline('Team '+key+' name', team.name, v=>team.name=v));
+
+      if(state.savedRosters===null){
+        state.savedRosters = 'loading';
+        loadSavedRosters();
+      }
+      const rosterRow = el('div','row2');
+      const loadField = el('div','field');
+      loadField.appendChild(el('label','','Load a saved roster'));
+      if(state.savedRosters==='loading'){
+        loadField.appendChild(el('div','helptext','Loading your saved rosters…'));
+      } else {
+        const rosterSel = el('select');
+        const blank = el('option','','— none —'); blank.value=''; rosterSel.appendChild(blank);
+        (state.savedRosters||[]).forEach(r=>{
+          const opt = el('option','', r.name+' ('+new Date(r.savedAt).toLocaleDateString()+')');
+          opt.value = r.id;
+          rosterSel.appendChild(opt);
+        });
+        rosterSel.onchange = e=>{ if(e.target.value) applyRoster(key, e.target.value); };
+        loadField.appendChild(rosterSel);
+      }
+      rosterRow.appendChild(loadField);
+
+      const saveField = el('div','field');
+      saveField.appendChild(el('label','','Save this team as a roster'));
+      const saveNameInput = el('input');
+      saveNameInput.type='text'; saveNameInput.placeholder='Roster name';
+      saveNameInput.value = state.tempRosterSaveName[key] || team.name;
+      saveNameInput.oninput = e=>{ state.tempRosterSaveName[key] = e.target.value; };
+      saveField.appendChild(saveNameInput);
+      const saveBtn = el('button','btn btn-ghost','Save Roster');
+      saveBtn.type='button'; saveBtn.style.marginTop='8px';
+      saveBtn.onclick = ()=>{ saveRoster(key, state.tempRosterSaveName[key] || team.name); };
+      saveField.appendChild(saveBtn);
+      rosterRow.appendChild(saveField);
+      wrap.appendChild(rosterRow);
+
       wrap.appendChild(el('div','team-list-title','Playing XI — Team '+key));
       wrap.appendChild(el('div','helptext','Batting style and bowling role drive dismissal/UI logic later.'));
       team.players.forEach((p,i)=>{
@@ -1197,6 +1331,192 @@ function renderModal(){
 }
 
 /* ---------------- VIEWER SCORECARD ---------------- */
+function cumulativeRunsByOver(inn){
+  const points = [{x:0, y:0}];
+  let cum = 0, legal = 0;
+  inn.deliveries.forEach(d=>{
+    cum += d.runsOffBat + d.extraRuns;
+    if(d.legal) legal++;
+    points.push({x: legal/6, y: cum});
+  });
+  return points;
+}
+
+function buildWormChart(){
+  const dataSets = state.innings.map((inn,idx)=>({
+    label: getTeam(inn.battingTeam).name || ('Team '+(idx+1)),
+    points: cumulativeRunsByOver(inn),
+    color: idx===0 ? '#B23A2E' : '#14181A'
+  })).filter(ds=>ds.points.length>1);
+  if(!dataSets.length) return null;
+
+  const maxX = Math.max(state.maxOvers, ...dataSets.map(ds=>ds.points[ds.points.length-1].x));
+  const maxY = Math.max(10, ...dataSets.map(ds=>Math.max(...ds.points.map(p=>p.y)))) * 1.1;
+  const width=600, height=240, padL=38, padR=14, padT=14, padB=28;
+  const plotW = width-padL-padR, plotH = height-padT-padB;
+  const xScale = x => padL + (x/maxX)*plotW;
+  const yScale = y => padT + plotH - (y/maxY)*plotH;
+
+  let svg = '<svg viewBox="0 0 '+width+' '+height+'" style="width:100%;height:auto;">';
+  svg += '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+plotH)+'" stroke="#999" stroke-width="1"/>';
+  svg += '<line x1="'+padL+'" y1="'+(padT+plotH)+'" x2="'+(padL+plotW)+'" y2="'+(padT+plotH)+'" stroke="#999" stroke-width="1"/>';
+  const xStep = maxX>40 ? 10 : maxX>15 ? 5 : 2;
+  for(let o=0; o<=maxX; o+=xStep){
+    const x = xScale(o);
+    svg += '<line x1="'+x+'" y1="'+(padT+plotH)+'" x2="'+x+'" y2="'+(padT+plotH+4)+'" stroke="#999"/>';
+    svg += '<text x="'+x+'" y="'+(padT+plotH+16)+'" font-size="9" fill="#777" text-anchor="middle" font-family="Space Mono, monospace">'+o+'</text>';
+  }
+  const yStep = Math.max(10, Math.ceil(maxY/4/10)*10);
+  for(let r=0; r<=maxY; r+=yStep){
+    const y = yScale(r);
+    svg += '<text x="'+(padL-6)+'" y="'+(y+3)+'" font-size="9" fill="#777" text-anchor="end" font-family="Space Mono, monospace">'+r+'</text>';
+  }
+  dataSets.forEach(ds=>{
+    const pathD = ds.points.map((p,i)=> (i===0?'M':'L')+xScale(p.x).toFixed(1)+','+yScale(p.y).toFixed(1)).join(' ');
+    svg += '<path d="'+pathD+'" fill="none" stroke="'+ds.color+'" stroke-width="2"/>';
+  });
+  svg += '</svg>';
+  return { svg, dataSets };
+}
+
+function matchBattingLeaders(){
+  const all = [];
+  state.innings.forEach(inn=>{
+    const team = getTeam(inn.battingTeam);
+    const facedIds = [...new Set(inn.deliveries.map(d=>d.strikerId))];
+    team.players.concat(team.substitutes||[]).filter(p=>facedIds.includes(p.id)).forEach(p=>{
+      const st = battingStatsFor(inn,p.id);
+      all.push({ name: p.name||p.id, runs: st.runs, balls: st.balls });
+    });
+  });
+  return all.sort((a,b)=>b.runs-a.runs).slice(0,3);
+}
+function matchBowlingLeaders(){
+  const all = [];
+  state.innings.forEach(inn=>{
+    const team = getTeam(inn.bowlingTeam);
+    const bowledIds = [...new Set(inn.deliveries.map(d=>d.bowlerId))];
+    team.players.concat(team.substitutes||[]).filter(p=>bowledIds.includes(p.id)).forEach(p=>{
+      const bs = bowlingStatsFor(inn,p.id);
+      all.push({ name: p.name||p.id, wkts: bs.wkts, runs: bs.runs, overs: bs.overs });
+    });
+  });
+  return all.sort((a,b)=> b.wkts-a.wkts || a.runs-b.runs).slice(0,3);
+}
+
+async function generateScorecardImage(){
+  try{ await document.fonts.ready; }catch(e){}
+  const W=1080, H=1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#122318';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#E8A63D';
+  ctx.fillRect(0,0,W,10);
+
+  const inn1 = state.innings[0], inn2 = state.innings[1];
+  const team1 = getTeam(inn1.battingTeam), team2 = getTeam(inn2.battingTeam);
+
+  let y = 90;
+  ctx.fillStyle = '#8FA98F';
+  ctx.font = '600 28px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('FINAL SCORECARD', W/2, y);
+
+  y += 70;
+  ctx.fillStyle = '#F4F1E6';
+  ctx.font = '700 46px Fraunces, serif';
+  ctx.fillText((team1.name||'Team A')+' vs '+(team2.name||'Team B'), W/2, y);
+
+  y += 90;
+  [[team1,inn1],[team2,inn2]].forEach(([team,inn])=>{
+    ctx.font = '600 32px Inter, sans-serif';
+    ctx.fillStyle = '#F4F1E6';
+    ctx.textAlign = 'left';
+    ctx.fillText(team.name||'Team', 90, y);
+    ctx.textAlign = 'right';
+    ctx.font = "700 40px 'Space Mono', monospace";
+    ctx.fillStyle = '#E8A63D';
+    ctx.fillText(teamTotal(inn)+'/'+teamWickets(inn)+'  ('+oversStr(inn)+' ov)', W-90, y);
+    y += 60;
+  });
+
+  y += 20;
+  const t1 = teamTotal(inn1), t2 = teamTotal(inn2);
+  let resultText;
+  if(t2>t1) resultText = (team2.name||'Team 2')+' won by '+(10-teamWickets(inn2))+' wickets';
+  else if(t1>t2) resultText = (team1.name||'Team 1')+' won by '+(t1-t2)+' runs';
+  else resultText = 'Match tied';
+  ctx.textAlign = 'center';
+  ctx.font = '600 30px Inter, sans-serif';
+  ctx.fillStyle = '#B23A2E';
+  ctx.fillText(resultText, W/2, y);
+
+  y += 70;
+  ctx.strokeStyle = 'rgba(244,241,230,0.25)';
+  ctx.beginPath(); ctx.moveTo(90,y); ctx.lineTo(W-90,y); ctx.stroke();
+
+  y += 60;
+  ctx.textAlign = 'left';
+  ctx.font = '600 26px Inter, sans-serif';
+  ctx.fillStyle = '#8FA98F';
+  ctx.fillText('TOP BATTING', 90, y);
+  y += 50;
+  matchBattingLeaders().forEach(b=>{
+    ctx.font = '500 28px Inter, sans-serif';
+    ctx.fillStyle = '#F4F1E6';
+    ctx.textAlign = 'left';
+    ctx.fillText(b.name, 90, y);
+    ctx.font = "600 28px 'Space Mono', monospace";
+    ctx.fillStyle = '#E8A63D';
+    ctx.textAlign = 'right';
+    ctx.fillText(b.runs+' ('+b.balls+')', W-90, y);
+    y += 48;
+  });
+
+  y += 30;
+  ctx.textAlign = 'left';
+  ctx.font = '600 26px Inter, sans-serif';
+  ctx.fillStyle = '#8FA98F';
+  ctx.fillText('TOP BOWLING', 90, y);
+  y += 50;
+  matchBowlingLeaders().forEach(b=>{
+    ctx.font = '500 28px Inter, sans-serif';
+    ctx.fillStyle = '#F4F1E6';
+    ctx.textAlign = 'left';
+    ctx.fillText(b.name, 90, y);
+    ctx.font = "600 28px 'Space Mono', monospace";
+    ctx.fillStyle = '#E8A63D';
+    ctx.textAlign = 'right';
+    ctx.fillText(b.wkts+'/'+b.runs+' ('+b.overs+')', W-90, y);
+    y += 48;
+  });
+
+  ctx.textAlign = 'center';
+  ctx.font = '500 22px Inter, sans-serif';
+  ctx.fillStyle = '#8FA98F';
+  ctx.fillText('Scored live with Scoreboard', W/2, H-50);
+
+  return new Promise(resolve=>{ canvas.toBlob(blob=>resolve(blob), 'image/png'); });
+}
+
+async function shareScorecardImage(){
+  const blob = await generateScorecardImage();
+  if(!blob) return;
+  const file = new File([blob], 'scorecard.png', { type:'image/png' });
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    try{ await navigator.share({ files:[file], title:'Match scorecard' }); return; }
+    catch(e){ /* cancelled or unsupported — fall back to download */ }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'scorecard.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+
 function renderViewer(){
   const frag = el('div');
   state.innings.forEach((inn, idx)=>{
@@ -1253,6 +1573,22 @@ function renderViewer(){
     frag.appendChild(paper);
   });
 
+  const worm = buildWormChart();
+  if(worm){
+    const wormPaper = el('div','paper');
+    wormPaper.appendChild(el('h3','Run progression'));
+    const legend = el('div','', worm.dataSets.map(ds=>
+      '<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:12px;color:#555;">'+
+      '<span style="width:10px;height:10px;background:'+ds.color+';display:inline-block;"></span>'+ds.label+'</span>'
+    ).join(''));
+    legend.style.marginBottom = '10px';
+    wormPaper.appendChild(legend);
+    const svgWrap = el('div');
+    svgWrap.innerHTML = worm.svg;
+    wormPaper.appendChild(svgWrap);
+    frag.appendChild(wormPaper);
+  }
+
   if(state.matchComplete && state.innings.length===2){
     const inn1 = state.innings[0], inn2 = state.innings[1];
     const t1 = teamTotal(inn1), t2 = teamTotal(inn2);
@@ -1264,6 +1600,10 @@ function renderViewer(){
     else text = 'Match tied';
     summary.appendChild(el('h3','Result'));
     summary.appendChild(el('div','', text));
+    const shareBtn = el('button','btn btn-primary','Share Scorecard Image');
+    shareBtn.style.marginTop = '16px';
+    shareBtn.onclick = ()=>{ shareScorecardImage(); };
+    summary.appendChild(shareBtn);
     frag.appendChild(summary);
   } else if(state.innings.length===2 && !state.matchComplete){
     const paper = el('div','paper');
@@ -1279,6 +1619,14 @@ function renderViewer(){
   return frag;
 }
 
+(function prefillFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  const codeParam = params.get('code');
+  if(codeParam){
+    state.tempCode = codeParam.toUpperCase();
+    state.tempRole = 'viewer';
+  }
+})();
 render();
 </script>
 </body>
