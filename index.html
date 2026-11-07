@@ -1,184 +1,511 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scoreboard — Live Cricket Scorer</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-  :root{
-    --turf: #122318;
-    --turf-2: #0d1a12;
-    --cream: #F4F1E6;
-    --cream-dim: #E7E2D2;
-    --amber: #E8A63D;
-    --amber-dim: #B9822E;
-    --ink: #14181A;
-    --red: #B23A2E;
-    --sage: #8FA98F;
-    --line: rgba(244,241,230,0.18);
-    --line-dark: rgba(20,24,26,0.15);
+  /* Pre-compiled Tailwind Dashboard Theme — renders immediately without CDN compilation */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #020617; /* slate-950 */
+    color: #f1f5f9; /* slate-100 */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--turf);
-    color:var(--cream);
-    font-family:'Inter',sans-serif;
-    min-height:100vh;
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
-  .num{font-family:'Space Mono',monospace;}
-  h1,h2,h3,.serif{font-family:'Fraunces',serif;}
-  button{font-family:'Inter',sans-serif;cursor:pointer;}
-  input,select{font-family:'Inter',sans-serif;}
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.45; pointer-events: none; }
+  input, select { font-family: inherit; }
+
+  .num { font-family: 'Space Mono', monospace; font-variant-numeric: tabular-nums; }
+  .serif { font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: -0.02em; }
 
   /* ---------- App Shell ---------- */
-  .app{max-width:960px;margin:0 auto;padding:28px 20px 80px;}
-  .topline{
-    display:flex;justify-content:space-between;align-items:baseline;
-    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:28px;
+  .app { max-width: 1024px; margin: 0 auto; padding: 24px 16px 80px; }
+  .topline {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
   }
-  .brand{font-size:22px;font-weight:600;letter-spacing:0.3px;}
-  .brand span{color:var(--amber);}
-  .subnav{display:flex;gap:18px;font-size:13px;color:var(--sage);}
-  .subnav b{color:var(--cream);border-bottom:2px solid var(--amber);padding-bottom:2px;}
-
-  /* ---------- Setup Wizard ---------- */
-  .clipboard{
-    background:var(--cream);color:var(--ink);
-    border:1px solid var(--line-dark);
-    padding:36px 40px;
-    max-width:640px;margin:0 auto;
-    position:relative;
+  .brand { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff; }
+  .brand span { color: #34d399; }
+  .subnav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #020617;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #1e293b;
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
   }
-  .clipboard::before{
-    content:"";position:absolute;top:-10px;left:50%;transform:translateX(-50%);
-    width:90px;height:20px;background:var(--ink);border-radius:3px;
-  }
-  .step-label{font-size:12px;color:var(--amber-dim);margin-bottom:6px;font-weight:600;}
-  .clipboard h2{margin:0 0 22px;font-size:26px;font-weight:600;}
-  .field{margin-bottom:18px;}
-  .field label{display:block;font-size:13px;margin-bottom:6px;color:#444;}
-  .field input[type=text], .field input[type=number], .field select{
-    width:100%;padding:10px 12px;border:1px solid #ccc7b8;background:#fff;
-    font-size:15px;color:var(--ink);
-  }
-  .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  .choice-group{display:flex;gap:10px;flex-wrap:wrap;}
-  .choice{
-    border:1px solid #ccc7b8;padding:10px 16px;background:#fff;font-size:14px;
-    transition:none;
-  }
-  .choice.active{background:var(--ink);color:var(--cream);border-color:var(--ink);}
-  .player-row{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-bottom:8px;align-items:center;}
-  .player-row input, .player-row select{padding:8px;font-size:13px;border:1px solid #ccc7b8;}
-  .wizard-actions{display:flex;justify-content:space-between;margin-top:26px;}
-  .btn{
-    border:none;padding:12px 22px;font-size:14px;font-weight:600;letter-spacing:0.2px;
-  }
-  .btn-primary{background:var(--ink);color:var(--cream);}
-  .btn-primary:hover{background:#000;}
-  .btn-ghost{background:transparent;color:#555;border:1px solid #ccc7b8;}
-  .btn-amber{background:var(--amber);color:var(--ink);}
-  .btn-amber:hover{background:#f0b654;}
-  .team-list-title{font-size:14px;font-weight:600;margin:18px 0 8px;color:#333;}
-  .helptext{font-size:12px;color:#777;margin-top:-10px;margin-bottom:16px;}
-
-  /* ---------- Live Scorer ---------- */
-  .board{
-    background:var(--ink);border:1px solid #2a2f31;
-    padding:0;margin-bottom:24px;
-  }
-  .board-top{
-    display:grid;grid-template-columns:2fr 1fr 1fr;
-    padding:20px 26px;border-bottom:1px solid #2a2f31;
-  }
-  .board-teams{font-size:13px;color:var(--sage);margin-bottom:4px;}
-  .board-score{font-size:44px;color:var(--amber);font-weight:700;line-height:1;}
-  .board-sub{font-size:12px;color:var(--sage);margin-top:6px;}
-  .board-stat{text-align:right;}
-  .board-stat .label{font-size:11px;color:var(--sage);text-transform:lowercase;}
-  .board-stat .value{font-size:22px;color:var(--cream);}
-  .board-mid{display:grid;grid-template-columns:1fr 1fr;}
-  .player-panel{padding:16px 26px;border-right:1px solid #2a2f31;}
-  .player-panel:last-child{border-right:none;}
-  .panel-title{font-size:11px;color:var(--sage);margin-bottom:10px;letter-spacing:0.4px;}
-  .p-line{display:flex;justify-content:space-between;font-size:15px;padding:5px 0;}
-  .p-line .name{color:var(--cream);}
-  .p-line .name.strike::after{content:" *";color:var(--amber);}
-  .p-line .figs{color:var(--sage);font-size:13px;}
-  .freehit-banner{
-    background:var(--red);color:var(--cream);text-align:center;padding:8px;
-    font-size:13px;font-weight:600;letter-spacing:0.4px;
+  .subnav span { padding: 6px 12px; border-radius: 8px; transition: color 0.15s; }
+  .subnav span:hover { color: #e2e8f0; }
+  .subnav b {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    margin: -6px -12px;
+    display: inline-block;
   }
 
-  .controls{background:var(--turf-2);border:1px solid #223327;padding:20px 26px;}
-  .ctrl-section{margin-bottom:18px;}
-  .ctrl-label{font-size:11px;color:var(--sage);margin-bottom:8px;letter-spacing:0.4px;}
-  .chip-row{display:flex;flex-wrap:wrap;gap:8px;}
-  .chip{
-    border:1px solid var(--amber-dim);color:var(--amber);background:transparent;
-    padding:10px 16px;font-size:15px;font-weight:600;min-width:46px;text-align:center;
+  /* ---------- Setup Wizard & Connect Card ---------- */
+  .clipboard {
+    background: #0f172a;
+    color: #f1f5f9;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 28px 24px;
+    max-width: 672px;
+    margin: 0 auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
   }
-  .chip:hover{background:rgba(232,166,61,0.12);}
-  .chip.extra{border-color:var(--sage);color:var(--sage);font-weight:600;}
-  .chip.extra:hover{background:rgba(143,169,143,0.12);}
-  .chip.wicket{border-color:var(--red);color:var(--red);font-weight:700;}
-  .chip.wicket:hover{background:rgba(178,58,46,0.12);}
-  .chip.undo{border-color:#666;color:#aaa;margin-left:auto;}
-  .ctrl-toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
-  .over-timeline{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
-  .ball-pill{
-    width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:11px;font-family:'Space Mono',monospace;border:1px solid var(--sage);color:var(--cream);
+  .step-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
   }
-  .ball-pill.w{background:var(--red);border-color:var(--red);color:#fff;}
-  .ball-pill.x{background:var(--amber);border-color:var(--amber);color:var(--ink);}
+  .clipboard h2 {
+    margin: 0 0 24px;
+    padding-bottom: 12px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    border-bottom: 1px solid #1e293b;
+  }
+  .field { margin-bottom: 20px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 8px;
+  }
+  .field input[type=text],
+  .field input[type=number],
+  .field input[type=password],
+  .field select {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    background: #020617;
+    color: #f1f5f9;
+    font-size: 14px;
+    outline: none;
+  }
+  .field input:focus, .field select:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .choice-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .choice {
+    border: 1px solid #334155;
+    background: #020617;
+    color: #cbd5e1;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .choice:hover { border-color: #475569; background: #1e293b; }
+  .choice.active {
+    background: #059669;
+    color: #ffffff;
+    border-color: #10b981;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+  }
+  .player-row {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .player-row input, .player-row select {
+    padding: 9px 12px;
+    font-size: 13px;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    background: #020617;
+    color: #f1f5f9;
+    outline: none;
+  }
+  .player-row input:focus, .player-row select:focus { border-color: #10b981; }
+  .wizard-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid #1e293b;
+  }
+  .btn {
+    border: none;
+    border-radius: 12px;
+    padding: 11px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-primary {
+    background: #059669;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+  }
+  .btn-primary:hover { background: #10b981; }
+  .btn-ghost {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+  }
+  .btn-ghost:hover { background: #334155; color: #ffffff; }
+  .btn-amber { background: #f59e0b; color: #020617; font-weight: 700; }
+  .team-list-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #34d399;
+    margin: 24px 0 8px;
+    padding-top: 16px;
+    border-top: 1px solid #1e293b;
+  }
+  .helptext { font-size: 12px; color: #94a3b8; margin-top: 4px; margin-bottom: 16px; line-height: 1.5; }
 
-  .modal-backdrop{
-    position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:50;
+  /* ---------- Live Scorer Broadcast Hero ---------- */
+  .board {
+    background: linear-gradient(145deg, #0f172a 0%, #020617 100%);
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.5);
   }
-  .modal{background:var(--cream);color:var(--ink);padding:28px;width:100%;max-width:420px;}
-  .modal h3{margin-top:0;}
-  .modal .field select, .modal .field input{width:100%;padding:9px;border:1px solid #ccc7b8;}
-  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+  .board-top {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 16px;
+    padding: 24px;
+    border-bottom: 1px solid #1e293b;
+    align-items: center;
+  }
+  .board-teams {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #34d399;
+    margin-bottom: 6px;
+  }
+  .board-score { font-size: 48px; color: #ffffff; font-weight: 800; line-height: 1; }
+  .board-sub { font-size: 13px; color: #94a3b8; margin-top: 8px; font-weight: 500; }
+  .board-stat { text-align: right; }
+  .board-stat .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .board-stat .value { font-size: 24px; font-weight: 700; color: #f8fafc; margin-top: 2px; }
+  .board-mid { display: grid; grid-template-columns: 1fr 1fr; }
+  .player-panel { padding: 20px 24px; border-right: 1px solid #1e293b; }
+  .player-panel:last-child { border-right: none; }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+  .p-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+  }
+  .p-line:last-child { border-bottom: none; }
+  .p-line .name { color: #f1f5f9; font-weight: 600; }
+  .p-line .name.strike { color: #34d399; }
+  .p-line .name.strike::after { content: " ★"; color: #fbbf24; font-size: 12px; }
+  .p-line .figs {
+    color: #cbd5e1;
+    font-size: 13px;
+    background: #020617;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #1e293b;
+  }
+  .freehit-banner {
+    background: #e11d48;
+    color: #ffffff;
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ---------- Controls Keypad ---------- */
+  .controls {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 22px 24px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  }
+  .ctrl-toprow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #1e293b;
+  }
+  .ctrl-section { margin-bottom: 18px; }
+  .ctrl-section:last-child { margin-bottom: 0; }
+  .ctrl-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-bottom: 10px;
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    border: 1px solid #334155;
+    background: #020617;
+    color: #f8fafc;
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    min-width: 54px;
+    text-align: center;
+  }
+  .chip:hover { background: #1e293b; border-color: #10b981; }
+  .chip.extra {
+    border-color: rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.1);
+    color: #fcd34d;
+    font-weight: 600;
+  }
+  .chip.extra:hover { background: rgba(245, 158, 11, 0.2); }
+  .chip.wicket {
+    border-color: #f43f5e;
+    background: #e11d48;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 12px 24px;
+  }
+  .chip.wicket:hover { background: #f43f5e; }
+  .chip.undo {
+    border-color: #334155;
+    background: #1e293b;
+    color: #cbd5e1;
+    font-size: 12px;
+    padding: 8px 14px;
+    margin-left: auto;
+  }
+  .over-timeline { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .ball-pill {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    border: 1px solid #334155;
+    background: #020617;
+    color: #e2e8f0;
+  }
+  .ball-pill.w { background: #e11d48; border-color: #f43f5e; color: #ffffff; }
+  .ball-pill.x { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: #fcd34d; }
+
+  /* ---------- Modals ---------- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.82);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+  }
+  .modal {
+    background: #0f172a;
+    color: #f1f5f9;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  }
+  .modal h3 { margin: 0 0 12px; font-size: 18px; font-weight: 700; color: #ffffff; }
+  .modal select, .modal input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    background: #020617;
+    color: #f1f5f9;
+    font-size: 14px;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #1e293b;
+  }
 
   /* ---------- Viewer Scorecard ---------- */
-  .paper{background:var(--cream);color:var(--ink);padding:30px 34px;margin-bottom:20px;}
-  .paper h3{margin:0 0 14px;font-size:18px;border-bottom:2px solid var(--ink);padding-bottom:8px;}
-  table{width:100%;border-collapse:collapse;font-size:13.5px;}
-  th{text-align:left;font-weight:600;border-bottom:1px solid #999;padding:6px 8px;color:#555;font-size:12px;}
-  td{padding:6px 8px;border-bottom:1px solid #ddd6c4;}
-  td.num, th.num{text-align:right;font-family:'Space Mono',monospace;}
-  .dismissal{font-size:11.5px;color:#777;}
-  .fow-row{font-size:13px;padding:4px 0;border-bottom:1px dashed #ccc7b8;}
-  .partnership{font-size:13px;padding:6px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;}
-  .empty-note{font-size:13px;color:#888;font-style:italic;}
-  .innings-tag{display:inline-block;background:var(--ink);color:var(--cream);font-size:11px;padding:3px 10px;margin-bottom:10px;}
+  .paper {
+    background: #0f172a;
+    color: #f1f5f9;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  }
+  .paper h3 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 12px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th {
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #1e293b;
+    padding: 10px 8px;
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  td { padding: 10px 8px; border-bottom: 1px solid rgba(30, 41, 59, 0.6); color: #e2e8f0; }
+  td.num, th.num { text-align: right; font-family: 'Space Mono', monospace; }
+  .dismissal { font-size: 12px; color: #94a3b8; }
+  .fow-row {
+    font-size: 12.5px;
+    color: #cbd5e1;
+    padding: 10px 12px;
+    background: #020617;
+    border-radius: 10px;
+    border: 1px solid #1e293b;
+    line-height: 1.6;
+  }
+  .empty-note { font-size: 13.5px; color: #94a3b8; font-style: italic; }
+  .innings-tag {
+    display: inline-block;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
 
-  @media(max-width:640px){
-    .board-top{grid-template-columns:1fr;gap:10px;}
-    .board-stat{text-align:left;}
-    .board-mid{grid-template-columns:1fr;}
-    .player-panel{border-right:none;border-bottom:1px solid #2a2f31;}
-    .clipboard{padding:26px 20px;}
-    .row2{grid-template-columns:1fr;}
-    .player-row{grid-template-columns:1fr;}
+  .app-footer {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: 1px solid #0f172a;
+  }
+  .app-footer a { color: #94a3b8; text-decoration: none; margin-left: 16px; }
+  .app-footer a:hover { color: #34d399; }
+
+  @media (max-width: 640px) {
+    .board-top { grid-template-columns: 1fr; gap: 12px; }
+    .board-stat { text-align: left; background: #020617; padding: 10px 14px; border-radius: 10px; border: 1px solid #1e293b; }
+    .board-mid { grid-template-columns: 1fr; }
+    .player-panel { border-right: none; border-bottom: 1px solid #1e293b; }
+    .clipboard { padding: 22px 16px; }
+    .row2 { grid-template-columns: 1fr; }
+    .player-row { grid-template-columns: 1fr; background: #020617; padding: 10px; border-radius: 12px; border: 1px solid #1e293b; }
   }
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
-<footer style="max-width:960px;margin:0 auto;padding:0 20px 40px;font-size:12px;color:var(--sage);display:flex;gap:16px;border-top:1px solid var(--line);padding-top:16px;">
+<footer class="app-footer">
   <span>&copy; 2026 Scoreboard</span>
-  <a href="privacy.html" style="color:var(--sage);">Privacy Policy</a>
-  <a href="terms.html" style="color:var(--sage);">Terms and Conditions</a>
+  <div>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms and Conditions</a>
+  </div>
 </footer>
 
 <script>
@@ -193,9 +520,20 @@ const firebaseConfig = {
   appId: "__FIREBASE_APP_ID__",
   measurementId: "__FIREBASE_MEASUREMENT_ID__"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+
+/* Prevent fatal crash on localhost before GitHub Actions injects secrets */
+const isLocalPreview = firebaseConfig.databaseURL.startsWith('__FIREBASE_');
+let db = null;
 let syncRef = null;
+
+if (!isLocalPreview && typeof firebase !== 'undefined') {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch (err) {
+    console.warn('Firebase initialization skipped or failed:', err);
+  }
+}
 
 function buildJoinUrl(code){
   const url = new URL(window.location.href);
@@ -209,13 +547,13 @@ function attachQRCodes(){
     const size = parseInt(elNode.getAttribute('data-qr-size') || '140');
     elNode.innerHTML = '';
     if(window.QRCode){
-      new QRCode(elNode, { text, width: size, height: size, colorDark:'#14181A', colorLight:'#F4F1E6', correctLevel: QRCode.CorrectLevel.M });
+      new QRCode(elNode, { text, width: size, height: size, colorDark:'#0f172a', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
     }
   });
 }
 
 async function loadSavedRosters(){
-  if(!firebase.auth().currentUser){ state.savedRosters = []; render(); return; }
+  if(!db || !firebase.auth().currentUser){ state.savedRosters = []; render(); return; }
   try{
     const uid = firebase.auth().currentUser.uid;
     const snap = await db.ref('rosters/'+uid).once('value');
@@ -230,8 +568,8 @@ async function loadSavedRosters(){
 }
 async function saveRoster(teamKey, name){
   const team = getTeam(teamKey);
-  const uid = firebase.auth().currentUser ? firebase.auth().currentUser.uid : null;
-  if(!uid) return;
+  if(!db || !firebase.auth().currentUser) return;
+  const uid = firebase.auth().currentUser.uid;
   const payload = {
     name: name || team.name || 'Unnamed roster',
     players: team.players, substitutes: team.substitutes,
@@ -260,15 +598,18 @@ function generateMatchCode(){
 }
 
 async function hashPassword(pw){
-  const enc = new TextEncoder().encode(pw);
-  const buf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  if (window.crypto && window.crypto.subtle) {
+    const enc = new TextEncoder().encode(pw);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  return btoa(pw);
 }
 
 /* Fields that are the shared "match record" — everything a viewer needs. */
 function buildSyncPayload(){
   return {
-    admin_uid: firebase.auth().currentUser ? firebase.auth().currentUser.uid : null,
+    admin_uid: (!isLocalPreview && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : 'local-admin',
     scorer_password_hash: state.scorerPasswordHash || null,
     format: state.format, maxOvers: state.maxOvers, venue: state.venue,
     pitch: state.pitch, weather: state.weather,
@@ -293,10 +634,29 @@ function applyRemoteState(data){
   Object.assign(state, data, preserve);
   render();
 }
-function connectMatch(role, code, password){
+async function connectMatch(role, code, password){
   state.connecting = true;
   state.connectError = null;
   render();
+
+  /* Localhost preview fallback when Firebase secrets are not injected yet */
+  if (isLocalPreview || !db) {
+    if (role === 'admin' && !password) {
+      state.connecting = false;
+      state.connectError = 'Set a password to protect this match as its scorer.';
+      render();
+      return;
+    }
+    state.scorerPasswordHash = password ? await hashPassword(password) : null;
+    state.role = role;
+    state.matchCode = code;
+    state.connected = true;
+    state.connecting = false;
+    if (role === 'viewer') state.view = 'scorer';
+    render();
+    return;
+  }
+
   firebase.auth().signInAnonymously().then(async ()=>{
     const ref = db.ref('matches/' + code);
 
@@ -412,9 +772,9 @@ function freshInnings(battingTeam, bowlingTeam, target){
     deliveries: [],
     fow: [],
     target: target || null,
-    battingOrderInPlay: [],   // ids currently at crease order-independent
-    outBatsmen: {},           // id -> {dismissalType, fielderId, over}
-    dismissedOrder: []        // ids in order dismissed
+    battingOrderInPlay: [],
+    outBatsmen: {},
+    dismissedOrder: []
   };
 }
 
@@ -474,7 +834,6 @@ function bowlingStatsFor(inn, playerId){
   const wkts = inn.deliveries.filter(d=>d.bowlerId===playerId && d.wicket && d.wicket.creditBowler).length;
   const overs = Math.floor(balls/6)+'.'+(balls%6);
   const econ = balls>0 ? (runs/(balls/6)).toFixed(2) : '0.00';
-  // maidens
   let maidens=0;
   const overGroups = {};
   inn.deliveries.filter(d=>d.bowlerId===playerId).forEach(d=>{
@@ -512,7 +871,6 @@ function undo(){
 /* ---- core delivery logic ---- */
 function recordDelivery(partial){
   const inn = currentInnings();
-  const legal = partial.legal;
   const overNum = Math.floor(legalBallCount(inn)/6) + 1;
   const d = Object.assign({
     overNum,
@@ -540,13 +898,12 @@ function checkOverComplete(){
   if(legal>0 && legal%6===0){
     swapStrike();
     state.previousBowlerId = state.bowlerId;
-    state.bowlerId = null; // force new bowler pick
+    state.bowlerId = null;
   }
 }
 
 function bowlRuns(runs){
   pushHistory();
-  const wasFreeHit = state.freeHit;
   recordDelivery({ runsOffBat: runs, legal:true });
   state.freeHit = false;
   if(runs%2===1) swapStrike();
@@ -568,7 +925,6 @@ function openWideModal(){
 }
 function confirmWide(additionalRuns){
   pushHistory();
-  // The mandatory 1 run doesn't require running; only extra ground covered rotates strike.
   recordDelivery({ extraType:'Wd', extraRuns: 1 + additionalRuns, runsOffBat:0, legal:false });
   if(additionalRuns%2===1) swapStrike();
   state.modal = null;
@@ -582,7 +938,6 @@ function openNoBallModal(){
 }
 function confirmNoBall(runsOffBat){
   pushHistory();
-  // Batsman can freely play and score off a no ball (this is the no-ball itself, before any free hit).
   recordDelivery({ extraType:'Nb', extraRuns:1, runsOffBat, legal:false });
   state.freeHit = true;
   if(runsOffBat%2===1) swapStrike();
@@ -614,7 +969,6 @@ function confirmWicket(dismissalType, fielderId, runOutInfo){
   const creditBowler = ['Bowled','Caught','LBW','Stumped','Hit Wicket'].includes(dismissalType);
   const isFreeHitProtected = state.freeHit && ['Bowled','Caught','LBW','Stumped','Hit Wicket'].includes(dismissalType) && dismissalType!=='Run Out';
   if(isFreeHitProtected){
-    // on free hit, batsman can't be out this way (except run out) — treat as normal run delivery instead
     state.modal=null;
     render();
     return;
@@ -631,22 +985,20 @@ function confirmWicket(dismissalType, fielderId, runOutInfo){
     runsOffBat = runsCompleted;
   }
 
-  const d = recordDelivery({
+  recordDelivery({
     runsOffBat, legal,
     wicket: { dismissedId, dismissalType, fielderId: fielderId||null, creditBowler }
   });
   inn.fow.push({
-    wicketNum: teamWickets(inn), // after push, computed below via re-derive
+    wicketNum: teamWickets(inn),
     score: teamTotal(inn),
     player: findPlayer(dismissedId)?.name || dismissedId,
     over: oversStr(inn)
   });
   inn.dismissedOrder.push(dismissedId);
 
-  // strike rotation for run out based on completed runs (odd -> swap)
   if(dismissalType==='Run Out' && runsCompleted%2===1) swapStrike();
 
-  // remove dismissed batsman from crease, prompt new batsman
   if(dismissedId===state.strikerId){
     state.strikerId = null;
   } else {
@@ -680,7 +1032,6 @@ function maybeEndInnings(){
   const chased = inn.target!==null && total>=inn.target;
   if(allOut || oversDone || chased){
     if(state.currentInnings===0){
-      // start second innings
       const bat2 = inn.bowlingTeam, bowl2 = inn.battingTeam;
       state.innings.push(freshInnings(bat2, bowl2, teamTotal(inn)+1));
       state.currentInnings = 1;
@@ -702,6 +1053,7 @@ function render(){
   app.innerHTML = '';
   if(!state.connected){
     app.appendChild(renderConnectGate());
+    attachQRCodes();
     return;
   }
   pushStateToFirebase();
@@ -722,13 +1074,17 @@ function renderQrModal(){
   const backdrop = el('div','modal-backdrop');
   const m = el('div','modal');
   m.style.textAlign = 'center';
-  m.appendChild(el('h3','Scan to join as a viewer'));
+  m.appendChild(el('h3','','Scan to join as a viewer'));
   const qrBox = el('div');
   qrBox.setAttribute('data-qr', buildJoinUrl(state.matchCode));
   qrBox.setAttribute('data-qr-size','200');
-  qrBox.style.background = '#fff'; qrBox.style.display = 'inline-block'; qrBox.style.padding = '10px';
+  qrBox.style.background = '#ffffff';
+  qrBox.style.display = 'inline-block';
+  qrBox.style.padding = '12px';
+  qrBox.style.borderRadius = '12px';
+  qrBox.style.marginBottom = '12px';
   m.appendChild(qrBox);
-  m.appendChild(el('div','helptext','Or share the code: <b>'+state.matchCode+'</b>'));
+  m.appendChild(el('div','helptext','Or share the code: <b style="color:#34d399;font-family:\'Space Mono\',monospace;">'+state.matchCode+'</b>'));
   const actions = el('div','modal-actions');
   actions.style.justifyContent = 'center';
   const closeBtn = el('button','btn btn-primary','Close');
@@ -741,7 +1097,7 @@ function renderQrModal(){
 
 function renderConnectGate(){
   const wrap = el('div','clipboard');
-  wrap.appendChild(el('div','step-label','CONNECT'));
+  wrap.appendChild(el('div','step-label', isLocalPreview ? 'CONNECT · LOCAL PREVIEW' : 'CONNECT'));
   wrap.appendChild(el('h2','Join a match'));
   wrap.appendChild(fieldChoice('I am the...', ['Scorer (Admin)','Viewer'],
     state.tempRole==='admin' ? 'Scorer (Admin)' : 'Viewer',
@@ -751,8 +1107,11 @@ function renderConnectGate(){
   codeField.appendChild(el('label','', state.tempRole==='admin'
     ? 'Match code — share this with your viewers'
     : 'Enter the match code from your scorer'));
-  const codeInput = el('input');
-  codeInput.type='text'; codeInput.value=state.tempCode; codeInput.style.textTransform='uppercase';
+  const codeInput = el('input','num');
+  codeInput.type='text'; codeInput.value=state.tempCode;
+  codeInput.style.textTransform='uppercase';
+  codeInput.style.letterSpacing='0.1em';
+  codeInput.style.fontWeight='700';
   codeInput.oninput = e=>{ state.tempCode = e.target.value.toUpperCase(); };
   codeField.appendChild(codeInput);
   wrap.appendChild(codeField);
@@ -771,7 +1130,10 @@ function renderConnectGate(){
     const qrBox = el('div');
     qrBox.setAttribute('data-qr', buildJoinUrl(state.tempCode));
     qrBox.setAttribute('data-qr-size','120');
-    qrBox.style.background = '#fff'; qrBox.style.display = 'inline-block'; qrBox.style.padding = '8px';
+    qrBox.style.background = '#ffffff';
+    qrBox.style.display = 'inline-block';
+    qrBox.style.padding = '10px';
+    qrBox.style.borderRadius = '12px';
     qrField.appendChild(qrBox);
     wrap.appendChild(qrField);
   }
@@ -781,7 +1143,7 @@ function renderConnectGate(){
     : 'Your screen updates automatically after every ball the scorer logs.'));
 
   if(state.connectError){
-    wrap.appendChild(el('div','helptext', '<span style="color:var(--red);font-weight:600;">'+state.connectError+'</span>'));
+    wrap.appendChild(el('div','helptext', '<span style="color:#fb7185;font-weight:600;">'+state.connectError+'</span>'));
   }
 
   const actions = el('div','wizard-actions');
@@ -814,10 +1176,11 @@ function el(tag, cls, html){
 function renderTopline(){
   const wrap = el('div','topline');
   const brandWrap = el('div');
-  brandWrap.appendChild(el('div','brand','SCOREBOARD <span>·</span> live cricket scorer'));
-  const badgeLine = el('div','', '<span style="font-size:11px;color:var(--sage);">Match '+state.matchCode+' · '+(state.role==='admin'?'Scorer':'Viewer')+'</span>');
+  brandWrap.appendChild(el('div','brand','SCOREBOARD <span>·</span> <span style="color:#94a3b8;font-weight:500;font-size:14px;">live cricket scorer</span>'));
+  const badgeLine = el('div','', '<span style="font-size:12px;color:#94a3b8;font-family:\'Space Mono\',monospace;">Match '+state.matchCode+' · '+(state.role==='admin'?'Scorer':'Viewer')+'</span>');
+  badgeLine.style.marginTop = '4px';
   if(state.role==='admin'){
-    const qrLink = el('span','', ' <span style="font-size:11px;color:var(--amber);cursor:pointer;text-decoration:underline;">Show join QR</span>');
+    const qrLink = el('span','', ' <span style="font-size:12px;color:#34d399;cursor:pointer;text-decoration:underline;margin-left:8px;font-weight:600;">Show join QR</span>');
     qrLink.onclick = ()=>{ state.showQrModal = true; render(); };
     badgeLine.appendChild(qrLink);
   }
@@ -1102,7 +1465,7 @@ function renderScorer(){
     line.appendChild(el('span','figs num', bs.overs+'-'+bs.maidens+'-'+bs.runs+'-'+bs.wkts));
     bowlPanel.appendChild(line);
     if(isFinite(maxOv)){
-      bowlPanel.appendChild(el('div','p-line', '<span class="figs" style="font-size:11px;">Limit '+bs.overs+' / '+maxOv+' overs</span>'));
+      bowlPanel.appendChild(el('div','p-line', '<span style="font-size:11px;color:#94a3b8;">Limit '+bs.overs+' / '+maxOv+' overs</span>'));
     }
   }
   const legal = legalBallCount(inn);
@@ -1237,7 +1600,6 @@ function renderModal(){
 
   if(state.modal.type==='wicket'){
     m.appendChild(el('h3','Wicket — dismissal type'));
-    const battingTeam = getTeam(inn.battingTeam);
     const bowlingTeam = getTeam(inn.bowlingTeam);
     const fielders = bowlingTeam.players.concat(bowlingTeam.substitutes || []);
     const typeSel = el('select');
@@ -1258,6 +1620,7 @@ function renderModal(){
     const runOutWrap = el('div','field');
     runOutWrap.style.display='none';
     const whoSel = el('select');
+    whoSel.style.marginBottom = '12px';
     [state.strikerId, state.nonStrikerId].forEach(pid=>{
       if(!pid) return;
       const p = findPlayer(pid);
@@ -1346,7 +1709,7 @@ function buildWormChart(){
   const dataSets = state.innings.map((inn,idx)=>({
     label: getTeam(inn.battingTeam).name || ('Team '+(idx+1)),
     points: cumulativeRunsByOver(inn),
-    color: idx===0 ? '#B23A2E' : '#14181A'
+    color: idx===0 ? '#10b981' : '#38bdf8'
   })).filter(ds=>ds.points.length>1);
   if(!dataSets.length) return null;
 
@@ -1358,22 +1721,22 @@ function buildWormChart(){
   const yScale = y => padT + plotH - (y/maxY)*plotH;
 
   let svg = '<svg viewBox="0 0 '+width+' '+height+'" style="width:100%;height:auto;">';
-  svg += '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+plotH)+'" stroke="#999" stroke-width="1"/>';
-  svg += '<line x1="'+padL+'" y1="'+(padT+plotH)+'" x2="'+(padL+plotW)+'" y2="'+(padT+plotH)+'" stroke="#999" stroke-width="1"/>';
+  svg += '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+plotH)+'" stroke="#334155" stroke-width="1"/>';
+  svg += '<line x1="'+padL+'" y1="'+(padT+plotH)+'" x2="'+(padL+plotW)+'" y2="'+(padT+plotH)+'" stroke="#334155" stroke-width="1"/>';
   const xStep = maxX>40 ? 10 : maxX>15 ? 5 : 2;
   for(let o=0; o<=maxX; o+=xStep){
     const x = xScale(o);
-    svg += '<line x1="'+x+'" y1="'+(padT+plotH)+'" x2="'+x+'" y2="'+(padT+plotH+4)+'" stroke="#999"/>';
-    svg += '<text x="'+x+'" y="'+(padT+plotH+16)+'" font-size="9" fill="#777" text-anchor="middle" font-family="Space Mono, monospace">'+o+'</text>';
+    svg += '<line x1="'+x+'" y1="'+(padT+plotH)+'" x2="'+x+'" y2="'+(padT+plotH+4)+'" stroke="#334155"/>';
+    svg += '<text x="'+x+'" y="'+(padT+plotH+16)+'" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="Space Mono, monospace">'+o+'</text>';
   }
   const yStep = Math.max(10, Math.ceil(maxY/4/10)*10);
   for(let r=0; r<=maxY; r+=yStep){
     const y = yScale(r);
-    svg += '<text x="'+(padL-6)+'" y="'+(y+3)+'" font-size="9" fill="#777" text-anchor="end" font-family="Space Mono, monospace">'+r+'</text>';
+    svg += '<text x="'+(padL-6)+'" y="'+(y+3)+'" font-size="9" fill="#94a3b8" text-anchor="end" font-family="Space Mono, monospace">'+r+'</text>';
   }
   dataSets.forEach(ds=>{
     const pathD = ds.points.map((p,i)=> (i===0?'M':'L')+xScale(p.x).toFixed(1)+','+yScale(p.y).toFixed(1)).join(' ');
-    svg += '<path d="'+pathD+'" fill="none" stroke="'+ds.color+'" stroke-width="2"/>';
+    svg += '<path d="'+pathD+'" fill="none" stroke="'+ds.color+'" stroke-width="2.5" stroke-linecap="round"/>';
   });
   svg += '</svg>';
   return { svg, dataSets };
@@ -1411,34 +1774,34 @@ async function generateScorecardImage(){
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#122318';
+  ctx.fillStyle = '#0f172a';
   ctx.fillRect(0,0,W,H);
-  ctx.fillStyle = '#E8A63D';
-  ctx.fillRect(0,0,W,10);
+  ctx.fillStyle = '#10b981';
+  ctx.fillRect(0,0,W,12);
 
   const inn1 = state.innings[0], inn2 = state.innings[1];
   const team1 = getTeam(inn1.battingTeam), team2 = getTeam(inn2.battingTeam);
 
   let y = 90;
-  ctx.fillStyle = '#8FA98F';
+  ctx.fillStyle = '#94a3b8';
   ctx.font = '600 28px Inter, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('FINAL SCORECARD', W/2, y);
 
   y += 70;
-  ctx.fillStyle = '#F4F1E6';
-  ctx.font = '700 46px Fraunces, serif';
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = '800 46px Inter, sans-serif';
   ctx.fillText((team1.name||'Team A')+' vs '+(team2.name||'Team B'), W/2, y);
 
   y += 90;
   [[team1,inn1],[team2,inn2]].forEach(([team,inn])=>{
     ctx.font = '600 32px Inter, sans-serif';
-    ctx.fillStyle = '#F4F1E6';
+    ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'left';
     ctx.fillText(team.name||'Team', 90, y);
     ctx.textAlign = 'right';
     ctx.font = "700 40px 'Space Mono', monospace";
-    ctx.fillStyle = '#E8A63D';
+    ctx.fillStyle = '#10b981';
     ctx.fillText(teamTotal(inn)+'/'+teamWickets(inn)+'  ('+oversStr(inn)+' ov)', W-90, y);
     y += 60;
   });
@@ -1450,27 +1813,28 @@ async function generateScorecardImage(){
   else if(t1>t2) resultText = (team1.name||'Team 1')+' won by '+(t1-t2)+' runs';
   else resultText = 'Match tied';
   ctx.textAlign = 'center';
-  ctx.font = '600 30px Inter, sans-serif';
-  ctx.fillStyle = '#B23A2E';
+  ctx.font = '700 30px Inter, sans-serif';
+  ctx.fillStyle = '#fbbf24';
   ctx.fillText(resultText, W/2, y);
 
   y += 70;
-  ctx.strokeStyle = 'rgba(244,241,230,0.25)';
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(90,y); ctx.lineTo(W-90,y); ctx.stroke();
 
   y += 60;
   ctx.textAlign = 'left';
-  ctx.font = '600 26px Inter, sans-serif';
-  ctx.fillStyle = '#8FA98F';
+  ctx.font = '700 26px Inter, sans-serif';
+  ctx.fillStyle = '#94a3b8';
   ctx.fillText('TOP BATTING', 90, y);
   y += 50;
   matchBattingLeaders().forEach(b=>{
-    ctx.font = '500 28px Inter, sans-serif';
-    ctx.fillStyle = '#F4F1E6';
+    ctx.font = '600 28px Inter, sans-serif';
+    ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'left';
     ctx.fillText(b.name, 90, y);
-    ctx.font = "600 28px 'Space Mono', monospace";
-    ctx.fillStyle = '#E8A63D';
+    ctx.font = "700 28px 'Space Mono', monospace";
+    ctx.fillStyle = '#10b981';
     ctx.textAlign = 'right';
     ctx.fillText(b.runs+' ('+b.balls+')', W-90, y);
     y += 48;
@@ -1478,17 +1842,17 @@ async function generateScorecardImage(){
 
   y += 30;
   ctx.textAlign = 'left';
-  ctx.font = '600 26px Inter, sans-serif';
-  ctx.fillStyle = '#8FA98F';
+  ctx.font = '700 26px Inter, sans-serif';
+  ctx.fillStyle = '#94a3b8';
   ctx.fillText('TOP BOWLING', 90, y);
   y += 50;
   matchBowlingLeaders().forEach(b=>{
-    ctx.font = '500 28px Inter, sans-serif';
-    ctx.fillStyle = '#F4F1E6';
+    ctx.font = '600 28px Inter, sans-serif';
+    ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'left';
     ctx.fillText(b.name, 90, y);
-    ctx.font = "600 28px 'Space Mono', monospace";
-    ctx.fillStyle = '#E8A63D';
+    ctx.font = "700 28px 'Space Mono', monospace";
+    ctx.fillStyle = '#38bdf8';
     ctx.textAlign = 'right';
     ctx.fillText(b.wkts+'/'+b.runs+' ('+b.overs+')', W-90, y);
     y += 48;
@@ -1496,7 +1860,7 @@ async function generateScorecardImage(){
 
   ctx.textAlign = 'center';
   ctx.font = '500 22px Inter, sans-serif';
-  ctx.fillStyle = '#8FA98F';
+  ctx.fillStyle = '#64748b';
   ctx.fillText('Scored live with Scoreboard', W/2, H-50);
 
   return new Promise(resolve=>{ canvas.toBlob(blob=>resolve(blob), 'image/png'); });
@@ -1508,7 +1872,7 @@ async function shareScorecardImage(){
   const file = new File([blob], 'scorecard.png', { type:'image/png' });
   if(navigator.canShare && navigator.canShare({ files:[file] })){
     try{ await navigator.share({ files:[file], title:'Match scorecard' }); return; }
-    catch(e){ /* cancelled or unsupported — fall back to download */ }
+    catch(e){}
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1541,8 +1905,8 @@ function renderViewer(){
         dismissal = outInfo.wicket.dismissalType + (fielder ? ' (' + (fielder.name||fielder.id) + ')' : '');
       }
       const tr = el('tr');
-      tr.innerHTML = '<td>'+(p.name||p.id)+'</td><td class="dismissal">'+dismissal+'</td>'+
-        '<td class="num">'+st.runs+'</td><td class="num">'+st.balls+'</td>'+
+      tr.innerHTML = '<td style="font-weight:600;color:#ffffff;">'+(p.name||p.id)+'</td><td class="dismissal">'+dismissal+'</td>'+
+        '<td class="num" style="font-weight:700;color:#34d399;">'+st.runs+'</td><td class="num">'+st.balls+'</td>'+
         '<td class="num">'+st.fours+'</td><td class="num">'+st.sixes+'</td><td class="num">'+st.sr+'</td>';
       tbody.appendChild(tr);
     });
@@ -1565,7 +1929,7 @@ function renderViewer(){
     bowlingTeam.players.concat(bowlingTeam.substitutes || []).filter(p=>bowledIds.includes(p.id)).forEach(p=>{
       const bs = bowlingStatsFor(inn, p.id);
       const tr = el('tr');
-      tr.innerHTML = '<td>'+(p.name||p.id)+'</td><td class="num">'+bs.overs+'</td><td class="num">'+bs.maidens+'</td><td class="num">'+bs.runs+'</td><td class="num">'+bs.wkts+'</td><td class="num">'+bs.econ+'</td>';
+      tr.innerHTML = '<td style="font-weight:600;color:#ffffff;">'+(p.name||p.id)+'</td><td class="num">'+bs.overs+'</td><td class="num">'+bs.maidens+'</td><td class="num">'+bs.runs+'</td><td class="num" style="font-weight:700;color:#38bdf8;">'+bs.wkts+'</td><td class="num">'+bs.econ+'</td>';
       btbody.appendChild(tr);
     });
     btable.appendChild(btbody);
@@ -1578,10 +1942,10 @@ function renderViewer(){
     const wormPaper = el('div','paper');
     wormPaper.appendChild(el('h3','Run progression'));
     const legend = el('div','', worm.dataSets.map(ds=>
-      '<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:12px;color:#555;">'+
-      '<span style="width:10px;height:10px;background:'+ds.color+';display:inline-block;"></span>'+ds.label+'</span>'
+      '<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:12px;color:#cbd5e1;font-weight:600;">'+
+      '<span style="width:12px;height:12px;border-radius:3px;background:'+ds.color+';display:inline-block;"></span>'+ds.label+'</span>'
     ).join(''));
-    legend.style.marginBottom = '10px';
+    legend.style.marginBottom = '12px';
     wormPaper.appendChild(legend);
     const svgWrap = el('div');
     svgWrap.innerHTML = worm.svg;
@@ -1599,7 +1963,7 @@ function renderViewer(){
     else if(t1>t2) text = (team1.name||'Team 1')+' won by '+(t1-t2)+' runs';
     else text = 'Match tied';
     summary.appendChild(el('h3','Result'));
-    summary.appendChild(el('div','', text));
+    summary.appendChild(el('div','', '<span style="font-size:18px;font-weight:700;color:#fbbf24;">'+text+'</span>'));
     const shareBtn = el('button','btn btn-primary','Share Scorecard Image');
     shareBtn.style.marginTop = '16px';
     shareBtn.onclick = ()=>{ shareScorecardImage(); };
