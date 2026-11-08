@@ -1,97 +1,50 @@
-# 🏏 Scoreboard — Live Cricket Broadcast & Scorer
+# 🏏 Scoreboard — Live Cricket Scorer
 
-**Score the match ball-by-ball on your phone. Everyone else watches a real-time broadcast scoreboard, Worm & Manhattan charts, and full scorecards on theirs.**
+**Score the match on your phone. Everyone else watches it update in real time — on their phones, anywhere.**
 
-Zero app installs. Zero backend servers to maintain. Secret-safe deployment via GitHub Actions + Firebase Realtime Database.
+No app to install. No server to run. No cost. Just open a link.
 
-## ✨ What Makes Scoreboard Stand Out
+---
 
-### 1. Real Ball-by-Ball Cricket Engine
+## Why this exists
 
-* **Complete Delivery Telemetry:** Logs runs off the bat (`0, 1, 2, 3, 4, 6`), extras (`Wide`, `No Ball`, `Bye`, `Leg Bye`), and wickets with fielder attribution.
+Every local tournament has the same problem: someone's manually scoring in a notebook, someone else is shouting the score across the ground, and nobody watching from home has a clue what's happening. The tools that *do* solve this are either bulky club-management software or paid apps built for professional leagues.
 
-* **Automated Cricket Laws:**
+This is neither. It's a single page that turns any phone into a proper scorer's console — and turns every other phone into a live, synced scoreboard — built for street cricket, gully tournaments, school matches, and weekend leagues that deserve better than a shouted score update.
 
-  * Automatic strike rotation on odd runs and at the end of every 6-ball legal over.
+## ✨ Features
 
-  * Wides and No Balls accurately handle extra running byes and bat-on-no-ball boundaries.
+**Real ball-by-ball scoring engine**
+- Every delivery is logged individually — runs, extras, wickets — so strike rate, economy, and the full scorecard calculate themselves. Nothing is hand-typed twice.
+- Automatic strike rotation on odd runs and at the end of every over.
+- Wides and no-balls handle running byes and bat-on-no-ball runs correctly — because in real cricket, those balls aren't dead.
+- Free Hit is enforced automatically after every no-ball.
 
-  * **Free Hit enforcement:** Every No Ball triggers a live Free Hit banner on the next delivery and protects the batter from standard bowler dismissals (while keeping Run Out active).
+**Proper bowling rules, not just a tally**
+- Per-format bowler limits enforced automatically (2 overs in T10, 4 in T20, 10 in ODI).
+- No bowler can bowl two overs back to back — the app won't let you pick them.
+- You're prompted for a new bowler after every single over, with ineligible bowlers filtered out for you.
 
-  * **Bowler Quota & Consecutive Over Guards:** Enforces per-format bowler limits (`2` overs in T10, `4` in T20, `10` in ODI) and prevents any bowler from bowling consecutive overs.
+**Built for real match chaos**
+- Full run-out handling (who was out, how many runs were completed).
+- Substitute players for injuries or tactical changes — fielders, catches, and replacement batsmen all supported.
+- Full undo, for when a fat thumb hits the wrong button mid-over.
 
-  * **Full Multi-Step Undo Stack:** Reverts deliveries, wickets, over transitions, strike swaps, and innings completions cleanly.
+**Live sync — the actual point of this project**
+- The scorer's device is the only one that can *change* anything.
+- Anyone with the match code can *watch* — instantly, on their own phone, with zero setup.
+- Results only appear once the match has actually finished — no spoilers mid-innings.
 
-### 2. Interactive Pause & Command Menu (`⏸ Menu`)
+**Looks like a scoreboard, not a spreadsheet**
+- Designed around the aesthetic of an actual stadium scoreboard and a printed scorecard — not a generic dashboard template.
 
-* **Live Match Pause & Broadcast Status:** Pause the match for *Drinks Break*, *Rain Delay*, *Innings Break*, *Tactical Timeout*, or *Umpire Review* — instantly displaying a live status banner to all connected viewers.
+## 🖥️ How it works
 
-* **Quick Navigation & Tactical Actions:**
+1. **Scorer** opens the link, picks *Scorer (Admin)*, gets a match code, sets up both teams and the toss, and starts logging deliveries.
+2. **Viewers** open the same link, pick *Viewer*, enter that match code, and watch the board update after every ball — no refreshing required.
 
-  * Jump between **Home (Connect Hub)**, **Live Scorer Console**, **Scoreboard & Analytics**, and **Team Roster Setup**.
+That's the whole workflow. No accounts, no downloads, no waiting.
 
-  * **Manual Strike Swap**, **Mid-Over Bowler Change**, **Retire Hurt / Impact Substitute**, and **Declare / Conclude Innings**.
+---
 
-  * **Export HD Scorecard Poster (PNG)** & **JSON Match Backup**.
-
-  * Optional **Stadium Audio Feedback** (Web Audio API boundary & wicket chimes).
-
-### 3. Broadcast-Grade Scoreboard & Interactive Score Graph
-
-* **3-Mode Interactive Graph Suite:**
-
-  * **Worm Chart (Cumulative Runs):** Dual-innings trajectory comparison with plotted wicket markers (`W`), target line, and projected score.
-
-  * **Manhattan Chart (Runs Per Over):** Side-by-side over-by-over bar comparison with wicket indicators.
-
-  * **Run Rate Wave (CRR Progression):** Momentum tracker across every over.
-
-* **Interactive Over Inspector:** Tap or hover any over on the chart to inspect exact runs, wickets, bowler, and cumulative score at that point in the match.
-
-* **Phase & Partnership Analytics:** Powerplay / Middle / Death overs breakdown, boundary distribution, and partnership progress bars.
-
-### 4. Verified Match Code & Role Security
-
-* **Viewer Match Code Validation:** Checks if a match code actually exists before joining and displays a clear error alert if an invalid or inactive code is entered.
-
-* **SHA-256 Scorer Password Protection:** Only the scorer with the match password can log or modify deliveries; viewers get read-only live updates via a 5-character code or QR scan.
-
-
-## 📁 Repository Structure
-
-```
-Cric-scorer-main/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml      # GitHub Actions workflow injecting Firebase secrets at build time
-├── favicon.svg             # Vector cricket emblem favicon
-├── index.html              # Self-contained Live Scorer, Viewer, Analytics & Pause Menu app
-├── privacy.html            # Privacy Policy page
-├── terms.html              # Terms and Conditions page
-└── README.md               # Documentation & setup guide
-
-```
-
-## 🚀 Deploying with GitHub Secrets
-
-1. Create a Firebase project with **Realtime Database** and **Anonymous Authentication** enabled.
-
-2. In your GitHub repository, navigate to **Settings → Secrets and variables → Actions** and add:
-
-   * `FIREBASE_API_KEY`
-
-   * `FIREBASE_AUTH_DOMAIN`
-
-   * `FIREBASE_DATABASE_URL`
-
-   * `FIREBASE_PROJECT_ID`
-
-   * `FIREBASE_STORAGE_BUCKET`
-
-   * `FIREBASE_MESSAGING_SENDER_ID`
-
-   * `FIREBASE_APP_ID`
-
-   * `FIREBASE_MEASUREMENT_ID`
-
-3. Push to the `main` branch (or trigger **Deploy to GitHub Pages** manually in the Actions tab). `.github/workflows/deploy.yml` injects your credentials safely into the build artifact and publishes to GitHub Pages.
+*Built for the tournaments that never had a scoreboard before.*
