@@ -2,10 +2,11 @@
 <html lang="en" class="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scoreboard — Live Cricket Scorer</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Scoreboard — Live Cricket Broadcast &amp; Scorer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'%3E%3Crect width='64' height='64' rx='16' fill='%23060B14'/%3E%3Crect x='2' y='2' width='60' height='60' rx='14' stroke='%2310B981' stroke-width='2.5' stroke-opacity='0.4'/%3E%3Ccircle cx='32' cy='32' r='18' fill='%2310B981' fill-opacity='0.15' stroke='%2310B981' stroke-width='3'/%3E%3Cpath d='M21 21C27 27 27 37 21 43' stroke='%2334D399' stroke-width='2.5' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Cpath d='M43 21C37 27 37 37 43 43' stroke='%2334D399' stroke-width='2.5' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Cline x1='18' y1='46' x2='46' y2='18' stroke='%23F8FAFC' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -13,110 +14,235 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-  /* Pre-compiled Tailwind Dashboard Theme — renders immediately without CDN compilation */
   *, *::before, *::after { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    background-color: #020617; /* slate-950 */
-    color: #f1f5f9; /* slate-100 */
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    background-color: #060b14;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -15%, rgba(16, 185, 129, 0.12), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(56, 189, 248, 0.06), transparent);
+    color: #f1f5f9;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
   button {
     font-family: inherit;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  button:active { transform: scale(0.98); }
-  button:disabled { opacity: 0.45; pointer-events: none; }
+  button:active:not(:disabled) { transform: scale(0.97); }
+  button:disabled { opacity: 0.42; cursor: not-allowed; }
   input, select { font-family: inherit; }
 
   .num { font-family: 'Space Mono', monospace; font-variant-numeric: tabular-nums; }
   .serif { font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: -0.02em; }
 
-  /* ---------- App Shell ---------- */
-  .app { max-width: 1024px; margin: 0 auto; padding: 24px 16px 80px; }
+  /* ---------- Layout Shell ---------- */
+  .app {
+    width: 100%;
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 18px 14px 72px;
+    overflow-x: hidden;
+  }
+
+  /* ---------- Top Navigation Bar ---------- */
   .topline {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
-    background: rgba(15, 23, 42, 0.92);
+    gap: 12px;
+    background: rgba(11, 18, 32, 0.92);
+    backdrop-filter: blur(12px);
     border: 1px solid #1e293b;
     border-radius: 16px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.55);
   }
-  .brand { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff; }
-  .brand span { color: #34d399; }
-  .subnav {
+  .brand-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: none;
+    padding: 4px 6px;
+    margin: -4px -6px;
+    border-radius: 10px;
+    text-align: left;
+    color: inherit;
+  }
+  .brand-btn:hover { background: rgba(30, 41, 59, 0.5); }
+  .brand-btn:hover .brand-word { color: #34d399; }
+  .brand-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.08));
+    border: 1px solid rgba(16, 185, 129, 0.38);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  }
+  .brand {
+    font-size: clamp(16px, 3vw, 19px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #ffffff;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
-    background: #020617;
-    padding: 6px;
+  }
+  .brand-word { transition: color 0.15s ease; }
+  .brand-dot { color: #34d399; }
+  .brand-tag {
+    color: #94a3b8;
+    font-weight: 500;
+    font-size: 12.5px;
+  }
+  .nav-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .subnav {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #060b14;
+    padding: 4px;
     border-radius: 12px;
     border: 1px solid #1e293b;
-    font-size: 13px;
-    font-weight: 500;
-    color: #94a3b8;
+    max-width: 100%;
+    overflow-x: auto;
   }
-  .subnav span { padding: 6px 12px; border-radius: 8px; transition: color 0.15s; }
-  .subnav span:hover { color: #e2e8f0; }
-  .subnav b {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
+  .subnav-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #94a3b8;
+    font-size: 12.5px;
     font-weight: 600;
     padding: 6px 12px;
     border-radius: 8px;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    margin: -6px -12px;
+    white-space: nowrap;
+  }
+  .subnav-btn:hover { color: #f1f5f9; background: rgba(30, 41, 59, 0.45); }
+  .subnav-btn.active {
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.35);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+  }
+  .pause-trigger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #111c2d;
+    border: 1px solid #334155;
+    color: #f8fafc;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 7px 13px;
+    border-radius: 11px;
+    white-space: nowrap;
+  }
+  .pause-trigger-btn:hover {
+    border-color: #38bdf8;
+    background: #1e293b;
+  }
+  .pause-trigger-btn.is-paused {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(245, 158, 11, 0.45);
+    color: #fbbf24;
+  }
+
+  /* ---------- Status & Pause Banners ---------- */
+  .pause-live-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.08));
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: #fde68a;
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
     display: inline-block;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    animation: pulseGlow 1.8s infinite;
+  }
+  .pulse-dot.amber {
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+  }
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.92); }
   }
 
   /* ---------- Setup Wizard & Connect Card ---------- */
   .clipboard {
-    background: #0f172a;
+    background: #0b1220;
     color: #f1f5f9;
     border: 1px solid #1e293b;
-    border-radius: 16px;
-    padding: 28px 24px;
-    max-width: 672px;
+    border-radius: 18px;
+    padding: 26px 22px;
+    max-width: 700px;
     margin: 0 auto;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.6);
   }
   .step-label {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #34d399;
     background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.25);
+    border: 1px solid rgba(16, 185, 129, 0.28);
     padding: 4px 10px;
     border-radius: 6px;
     margin-bottom: 12px;
   }
   .clipboard h2 {
-    margin: 0 0 24px;
+    margin: 0 0 20px;
     padding-bottom: 12px;
-    font-size: 24px;
-    font-weight: 700;
+    font-size: clamp(20px, 3.5vw, 24px);
+    font-weight: 800;
     color: #ffffff;
     border-bottom: 1px solid #1e293b;
+    letter-spacing: -0.02em;
   }
-  .field { margin-bottom: 20px; }
+  .field { margin-bottom: 18px; }
   .field label {
     display: block;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11.5px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: #94a3b8;
     margin-bottom: 8px;
   }
@@ -125,135 +251,193 @@
   .field input[type=password],
   .field select {
     width: 100%;
-    padding: 10px 14px;
+    max-width: 100%;
+    padding: 11px 14px;
     border-radius: 12px;
     border: 1px solid #334155;
-    background: #020617;
+    background: #060b14;
     color: #f1f5f9;
     font-size: 14px;
     outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
   .field input:focus, .field select:focus {
     border-color: #10b981;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
   }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .choice-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+  .choice-group { display: flex; gap: 8px; flex-wrap: wrap; }
   .choice {
     border: 1px solid #334155;
-    background: #020617;
+    background: #060b14;
     color: #cbd5e1;
     padding: 10px 16px;
     border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 13.5px;
+    font-weight: 600;
   }
-  .choice:hover { border-color: #475569; background: #1e293b; }
+  .choice:hover { border-color: #475569; background: #162235; }
   .choice.active {
     background: #059669;
     color: #ffffff;
     border-color: #10b981;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
   }
   .player-row {
     display: grid;
-    grid-template-columns: 1.5fr 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 10px;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 8px;
+    margin-bottom: 8px;
     align-items: center;
   }
   .player-row input, .player-row select {
-    padding: 9px 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 9px 10px;
     font-size: 13px;
     border-radius: 10px;
     border: 1px solid #334155;
-    background: #020617;
+    background: #060b14;
     color: #f1f5f9;
     outline: none;
   }
   .player-row input:focus, .player-row select:focus { border-color: #10b981; }
   .wizard-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    margin-top: 28px;
+    gap: 10px;
+    margin-top: 24px;
     padding-top: 16px;
     border-top: 1px solid #1e293b;
   }
   .btn {
     border: none;
     border-radius: 12px;
-    padding: 11px 22px;
-    font-size: 14px;
-    font-weight: 600;
+    padding: 11px 20px;
+    font-size: 13.5px;
+    font-weight: 700;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
   }
   .btn-primary {
     background: #059669;
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
   }
   .btn-primary:hover { background: #10b981; }
   .btn-ghost {
-    background: #1e293b;
+    background: #162235;
     color: #cbd5e1;
     border: 1px solid #334155;
   }
-  .btn-ghost:hover { background: #334155; color: #ffffff; }
-  .btn-amber { background: #f59e0b; color: #020617; font-weight: 700; }
+  .btn-ghost:hover { background: #1e293b; color: #ffffff; border-color: #475569; }
+  .btn-danger {
+    background: rgba(225, 29, 72, 0.16);
+    color: #fda4af;
+    border: 1px solid rgba(244, 63, 94, 0.4);
+  }
+  .btn-danger:hover { background: #e11d48; color: #ffffff; }
+  .btn-amber {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+  }
+  .btn-amber:hover { background: #f59e0b; color: #060b14; }
+
   .team-list-title {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.07em;
     color: #34d399;
-    margin: 24px 0 8px;
-    padding-top: 16px;
+    margin: 22px 0 8px;
+    padding-top: 14px;
     border-top: 1px solid #1e293b;
   }
-  .helptext { font-size: 12px; color: #94a3b8; margin-top: 4px; margin-bottom: 16px; line-height: 1.5; }
+  .helptext { font-size: 12.5px; color: #94a3b8; margin-top: 4px; margin-bottom: 14px; line-height: 1.5; }
 
-  /* ---------- Live Scorer Broadcast Hero ---------- */
+  .error-banner {
+    background: rgba(225, 29, 72, 0.14);
+    border: 1px solid rgba(244, 63, 94, 0.45);
+    color: #fecdd3;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* ---------- Broadcast Scoreboard Hero ---------- */
   .board {
-    background: linear-gradient(145deg, #0f172a 0%, #020617 100%);
+    background: linear-gradient(155deg, #0f172a 0%, #090f1d 100%);
     border: 1px solid #1e293b;
-    border-radius: 16px;
+    border-radius: 18px;
     overflow: hidden;
-    margin-bottom: 24px;
-    box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.5);
+    margin-bottom: 20px;
+    box-shadow: 0 18px 36px -8px rgba(0, 0, 0, 0.6);
   }
   .board-top {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: 16px;
-    padding: 24px;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    padding: 20px 22px;
     border-bottom: 1px solid #1e293b;
     align-items: center;
   }
   .board-teams {
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #34d399;
     margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .board-score { font-size: 48px; color: #ffffff; font-weight: 800; line-height: 1; }
-  .board-sub { font-size: 13px; color: #94a3b8; margin-top: 8px; font-weight: 500; }
-  .board-stat { text-align: right; }
+  .board-score {
+    font-size: clamp(34px, 6vw, 48px);
+    color: #ffffff;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  .board-sub { font-size: 12.5px; color: #94a3b8; margin-top: 8px; font-weight: 500; }
+  .board-stat {
+    text-align: right;
+    background: rgba(6, 11, 20, 0.65);
+    border: 1px solid #1e293b;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
   .board-stat .label {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 10.5px;
+    font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
   }
-  .board-stat .value { font-size: 24px; font-weight: 700; color: #f8fafc; margin-top: 2px; }
-  .board-mid { display: grid; grid-template-columns: 1fr 1fr; }
-  .player-panel { padding: 20px 24px; border-right: 1px solid #1e293b; }
+  .board-stat .value {
+    font-size: clamp(18px, 3vw, 23px);
+    font-weight: 700;
+    color: #f8fafc;
+    margin-top: 3px;
+  }
+  .board-mid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .player-panel { padding: 18px 22px; border-right: 1px solid #1e293b; min-width: 0; }
   .player-panel:last-child { border-right: none; }
   .panel-title {
     font-size: 11px;
@@ -261,56 +445,70 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #94a3b8;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   .p-line {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 14px;
+    gap: 8px;
+    font-size: 13.5px;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+    border-bottom: 1px solid rgba(30, 41, 59, 0.55);
   }
   .p-line:last-child { border-bottom: none; }
-  .p-line .name { color: #f1f5f9; font-weight: 600; }
-  .p-line .name.strike { color: #34d399; }
+  .p-line .name {
+    color: #f1f5f9;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .p-line .name.strike { color: #34d399; font-weight: 700; }
   .p-line .name.strike::after { content: " ★"; color: #fbbf24; font-size: 12px; }
   .p-line .figs {
     color: #cbd5e1;
-    font-size: 13px;
-    background: #020617;
-    padding: 4px 10px;
+    font-size: 12px;
+    background: #060b14;
+    padding: 4px 9px;
     border-radius: 8px;
     border: 1px solid #1e293b;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .freehit-banner {
-    background: #e11d48;
+    background: linear-gradient(90deg, #e11d48, #be123c);
     color: #ffffff;
     text-align: center;
-    padding: 8px;
+    padding: 8px 12px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
 
   /* ---------- Controls Keypad ---------- */
   .controls {
-    background: #0f172a;
+    background: #0b1220;
     border: 1px solid #1e293b;
-    border-radius: 16px;
-    padding: 22px 24px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    border-radius: 18px;
+    padding: 20px 22px;
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5);
   }
   .ctrl-toprow {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 18px;
+    gap: 10px;
+    margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid #1e293b;
   }
-  .ctrl-section { margin-bottom: 18px; }
+  .ctrl-section { margin-bottom: 16px; }
   .ctrl-section:last-child { margin-bottom: 0; }
   .ctrl-label {
     font-size: 11px;
@@ -318,197 +516,397 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #94a3b8;
-    margin-bottom: 10px;
+    margin-bottom: 9px;
   }
-  .chip-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
     border: 1px solid #334155;
-    background: #020617;
+    background: #060b14;
     color: #f8fafc;
     border-radius: 12px;
-    padding: 12px 18px;
+    padding: 12px 16px;
     font-size: 15px;
     font-weight: 700;
-    min-width: 54px;
+    min-width: 52px;
+    flex: 1 1 auto;
+    max-width: 110px;
     text-align: center;
   }
-  .chip:hover { background: #1e293b; border-color: #10b981; }
+  .chip:hover:not(:disabled) { background: #162235; border-color: #10b981; }
+  .chip.boundary-4 { border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; }
+  .chip.boundary-6 { border-color: rgba(16, 185, 129, 0.45); color: #34d399; }
   .chip.extra {
     border-color: rgba(245, 158, 11, 0.35);
-    background: rgba(245, 158, 11, 0.1);
+    background: rgba(245, 158, 11, 0.09);
     color: #fcd34d;
     font-weight: 600;
+    font-size: 13.5px;
+    max-width: 140px;
   }
-  .chip.extra:hover { background: rgba(245, 158, 11, 0.2); }
+  .chip.extra:hover:not(:disabled) { background: rgba(245, 158, 11, 0.18); }
   .chip.wicket {
     border-color: #f43f5e;
     background: #e11d48;
     color: #ffffff;
     font-weight: 700;
-    padding: 12px 24px;
+    padding: 12px 22px;
+    max-width: 200px;
   }
-  .chip.wicket:hover { background: #f43f5e; }
+  .chip.wicket:hover:not(:disabled) { background: #f43f5e; }
   .chip.undo {
     border-color: #334155;
-    background: #1e293b;
+    background: #162235;
     color: #cbd5e1;
     font-size: 12px;
-    padding: 8px 14px;
-    margin-left: auto;
+    padding: 8px 13px;
+    flex: 0 0 auto;
+    max-width: none;
   }
-  .over-timeline { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .over-timeline { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
   .ball-pill {
-    width: 32px;
+    min-width: 32px;
     height: 32px;
-    border-radius: 50%;
-    display: flex;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
     font-family: 'Space Mono', monospace;
     font-weight: 700;
     border: 1px solid #334155;
-    background: #020617;
+    background: #060b14;
     color: #e2e8f0;
   }
+  .ball-pill.b4 { background: rgba(56, 189, 248, 0.18); border-color: #38bdf8; color: #7dd3fc; }
+  .ball-pill.b6 { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #6ee7b7; }
   .ball-pill.w { background: #e11d48; border-color: #f43f5e; color: #ffffff; }
   .ball-pill.x { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: #fcd34d; }
 
-  /* ---------- Modals ---------- */
+  /* ---------- Modals & Pause Menu ---------- */
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(2, 6, 23, 0.82);
-    backdrop-filter: blur(4px);
+    background: rgba(2, 6, 23, 0.84);
+    backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 50;
-    padding: 16px;
+    z-index: 60;
+    padding: 14px;
+    overflow-y: auto;
   }
   .modal {
-    background: #0f172a;
+    background: #0b1220;
     color: #f1f5f9;
     border: 1px solid #1e293b;
-    border-radius: 16px;
-    padding: 24px;
+    border-radius: 18px;
+    padding: 22px;
     width: 100%;
-    max-width: 420px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
   }
-  .modal h3 { margin: 0 0 12px; font-size: 18px; font-weight: 700; color: #ffffff; }
+  .modal.wide-modal { max-width: 620px; }
+  .modal h3 { margin: 0 0 12px; font-size: 18px; font-weight: 800; color: #ffffff; }
   .modal select, .modal input {
     width: 100%;
     padding: 10px 12px;
     border-radius: 12px;
     border: 1px solid #334155;
-    background: #020617;
+    background: #060b14;
     color: #f1f5f9;
     font-size: 14px;
   }
   .modal-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 10px;
-    margin-top: 24px;
-    padding-top: 16px;
+    margin-top: 20px;
+    padding-top: 14px;
     border-top: 1px solid #1e293b;
   }
+  .pause-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .pause-card-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #060b14;
+    border: 1px solid #1e293b;
+    color: #f1f5f9;
+    text-align: left;
+  }
+  .pause-card-btn:hover:not(:disabled) {
+    border-color: #10b981;
+    background: #111c2d;
+  }
+  .pause-card-btn .p-title { font-size: 13px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 6px; }
+  .pause-card-btn .p-desc { font-size: 11px; color: #94a3b8; line-height: 1.35; }
 
-  /* ---------- Viewer Scorecard ---------- */
+  /* ---------- Viewer Scorecard & Analytics ---------- */
   .paper {
-    background: #0f172a;
+    background: #0b1220;
     color: #f1f5f9;
     border: 1px solid #1e293b;
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 20px;
-    overflow-x: auto;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 18px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.45);
   }
   .paper h3 {
-    margin: 0 0 16px;
-    font-size: 18px;
-    font-weight: 700;
+    margin: 0 0 14px;
+    font-size: clamp(16px, 2.8vw, 19px);
+    font-weight: 800;
     color: #ffffff;
     border-bottom: 1px solid #1e293b;
-    padding-bottom: 12px;
+    padding-bottom: 11px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
   }
-  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: auto;
+  }
   th {
     text-align: left;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid #1e293b;
-    padding: 10px 8px;
+    padding: 9px 6px;
     color: #94a3b8;
-    font-size: 11px;
+    font-size: 10.5px;
+    white-space: nowrap;
   }
-  td { padding: 10px 8px; border-bottom: 1px solid rgba(30, 41, 59, 0.6); color: #e2e8f0; }
-  td.num, th.num { text-align: right; font-family: 'Space Mono', monospace; }
-  .dismissal { font-size: 12px; color: #94a3b8; }
+  td {
+    padding: 9px 6px;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.55);
+    color: #e2e8f0;
+    vertical-align: middle;
+  }
+  td.num, th.num { text-align: right; font-family: 'Space Mono', monospace; white-space: nowrap; }
+  .dismissal { font-size: 11.5px; color: #94a3b8; line-height: 1.3; }
   .fow-row {
-    font-size: 12.5px;
+    font-size: 12px;
     color: #cbd5e1;
     padding: 10px 12px;
-    background: #020617;
+    background: #060b14;
     border-radius: 10px;
     border: 1px solid #1e293b;
     line-height: 1.6;
+    word-break: break-word;
   }
   .empty-note { font-size: 13.5px; color: #94a3b8; font-style: italic; }
   .innings-tag {
     display: inline-block;
-    background: rgba(16, 185, 129, 0.15);
+    background: rgba(16, 185, 129, 0.14);
     color: #34d399;
     border: 1px solid rgba(16, 185, 129, 0.3);
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10.5px;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    padding: 4px 10px;
+    padding: 4px 9px;
     border-radius: 6px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
+  /* ---------- Interactive Score Graph Suite ---------- */
+  .chart-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #1e293b;
+  }
+  .chart-tabs {
+    display: inline-flex;
+    background: #060b14;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+  .chart-tab {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 6px 11px;
+    border-radius: 7px;
+  }
+  .chart-tab.active {
+    background: #10b981;
+    color: #04130d;
+  }
+  .chart-inspector {
+    background: #060b14;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .over-scrubber {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 12px;
+  }
+  .over-chip {
+    background: #060b14;
+    border: 1px solid #1e293b;
+    color: #94a3b8;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 8px;
+    border-radius: 7px;
+  }
+  .over-chip:hover, .over-chip.active {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+  }
+  .over-chip.has-w { border-color: rgba(244, 63, 94, 0.45); }
+  .phase-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .phase-card {
+    background: #060b14;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  /* ---------- Toast Notification ---------- */
+  .toast-wrap {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 80;
+    max-width: calc(100vw - 40px);
+  }
+  .toast-msg {
+    background: #0f172a;
+    border: 1px solid #10b981;
+    color: #f8fafc;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ---------- Footer ---------- */
   .app-footer {
-    max-width: 1024px;
+    width: 100%;
+    max-width: 1060px;
     margin: 0 auto;
-    padding: 20px 16px 40px;
+    padding: 20px 14px 40px;
     font-size: 12px;
     color: #64748b;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 16px;
+    align-items: center;
+    gap: 12px;
     border-top: 1px solid #0f172a;
   }
-  .app-footer a { color: #94a3b8; text-decoration: none; margin-left: 16px; }
-  .app-footer a:hover { color: #34d399; }
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+  }
+  .footer-link-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .footer-link-btn:hover { color: #34d399; text-decoration: underline; }
 
-  @media (max-width: 640px) {
-    .board-top { grid-template-columns: 1fr; gap: 12px; }
-    .board-stat { text-align: left; background: #020617; padding: 10px 14px; border-radius: 10px; border: 1px solid #1e293b; }
+  @media (max-width: 680px) {
+    .board-top { grid-template-columns: 1fr; gap: 10px; padding: 16px; }
+    .board-stat { text-align: left; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; }
+    .board-stat .value { margin-top: 0; font-size: 18px; }
     .board-mid { grid-template-columns: 1fr; }
-    .player-panel { border-right: none; border-bottom: 1px solid #1e293b; }
-    .clipboard { padding: 22px 16px; }
+    .player-panel { border-right: none; border-bottom: 1px solid #1e293b; padding: 14px 16px; }
+    .player-panel:last-child { border-bottom: none; }
+    .clipboard { padding: 18px 14px; }
     .row2 { grid-template-columns: 1fr; }
-    .player-row { grid-template-columns: 1fr; background: #020617; padding: 10px; border-radius: 12px; border: 1px solid #1e293b; }
+    .player-row { grid-template-columns: 1fr; background: #060b14; padding: 10px; border-radius: 12px; border: 1px solid #1e293b; }
+    .pause-grid { grid-template-columns: 1fr; }
+    .phase-grid { grid-template-columns: 1fr; }
+    .paper { padding: 14px 12px; }
+    th, td { padding: 7px 4px; font-size: 11.5px; }
+    .dismissal { font-size: 10.5px; max-width: 110px; }
   }
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
+<div class="toast-wrap" id="toast-container" style="display:none;"></div>
+
 <footer class="app-footer">
-  <span>&copy; 2026 Scoreboard</span>
-  <div>
-    <a href="privacy.html">Privacy Policy</a>
-    <a href="terms.html">Terms and Conditions</a>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <button type="button" class="footer-link-btn" style="font-weight:700;color:#e2e8f0;" onclick="handleLogoClick()">SCOREBOARD</button>
+    <span>·</span>
+    <span>&copy; <span id="copyright-year">2026</span> Scoreboard Live Cricket Scorer</span>
+  </div>
+  <div class="footer-links">
+    <button type="button" class="footer-link-btn" onclick="openPauseMenu()">Pause &amp; Match Menu</button>
+    <button type="button" class="footer-link-btn" onclick="openLegalModal('privacy')">Privacy Policy</button>
+    <button type="button" class="footer-link-btn" onclick="openLegalModal('terms')">Terms and Conditions</button>
+    <button type="button" class="footer-link-btn" onclick="openLegalModal('support')">Help &amp; Shortcuts</button>
   </div>
 </footer>
 
 <script>
+document.getElementById('copyright-year').textContent = new Date().getFullYear();
 
 const firebaseConfig = {
   apiKey: "__FIREBASE_API_KEY__",
@@ -521,8 +919,8 @@ const firebaseConfig = {
   measurementId: "__FIREBASE_MEASUREMENT_ID__"
 };
 
-/* Prevent fatal crash on localhost before GitHub Actions injects secrets */
-const isLocalPreview = firebaseConfig.databaseURL.startsWith('__FIREBASE_');
+/* Detect whether GitHub Actions has injected live Firebase secrets */
+const isLocalPreview = firebaseConfig.databaseURL.startsWith('__FIREBASE_') || !firebaseConfig.databaseURL;
 let db = null;
 let syncRef = null;
 
@@ -535,51 +933,185 @@ if (!isLocalPreview && typeof firebase !== 'undefined') {
   }
 }
 
-function buildJoinUrl(code){
-  const url = new URL(window.location.href);
-  url.search = '';
-  url.searchParams.set('code', code);
-  return url.toString();
+/* =========================================================
+   WEB AUDIO SYNTHESIZER (Subtle Broadcast Feedback)
+   ========================================================= */
+let audioCtx = null;
+function playTone(kind) {
+  if (!state.soundEnabled) return;
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!audioCtx) audioCtx = new AudioContextClass();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    if (kind === 'boundary') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.setValueAtTime(659.25, now + 0.08);
+      osc.frequency.setValueAtTime(783.99, now + 0.16);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } else if (kind === 'wicket') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.linearRampToValueAtTime(140, now + 0.3);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc.start(now);
+      osc.stop(now + 0.32);
+    } else if (kind === 'error') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.setValueAtTime(180, now + 0.1);
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, now);
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.start(now);
+      osc.stop(now + 0.06);
+    }
+  } catch (e) {}
 }
+
+let toastTimer = null;
+function showToast(message, isError) {
+  const wrap = document.getElementById('toast-container');
+  if (!wrap) return;
+  wrap.style.display = 'block';
+  wrap.innerHTML = '';
+  const box = el('div', 'toast-msg');
+  if (isError) {
+    box.style.borderColor = '#f43f5e';
+    box.style.color = '#fecdd3';
+  }
+  box.textContent = message;
+  wrap.appendChild(box);
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    wrap.style.display = 'none';
+  }, 3400);
+}
+
+/* =========================================================
+   LOCAL STORAGE MATCH & ROSTER PERSISTENCE
+   ========================================================= */
+function saveMatchToLocal(code, payload) {
+  if (!code) return;
+  try {
+    localStorage.setItem('scoreboard_match_' + code.toUpperCase(), JSON.stringify(payload));
+  } catch (e) {}
+}
+
+function getMatchFromLocal(code) {
+  if (!code) return null;
+  try {
+    const raw = localStorage.getItem('scoreboard_match_' + code.toUpperCase());
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function listLocalMatchCodes() {
+  const codes = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('scoreboard_match_')) {
+        codes.push(k.replace('scoreboard_match_', ''));
+      }
+    }
+  } catch (e) {}
+  return codes;
+}
+
+function buildJoinUrl(code){
+  try {
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.searchParams.set('code', code);
+    return url.toString();
+  } catch (e) {
+    return 'https://scoreboard.app/?code=' + encodeURIComponent(code);
+  }
+}
+
 function attachQRCodes(){
   document.querySelectorAll('[data-qr]').forEach(elNode=>{
     const text = elNode.getAttribute('data-qr');
     const size = parseInt(elNode.getAttribute('data-qr-size') || '140');
     elNode.innerHTML = '';
     if(window.QRCode){
-      new QRCode(elNode, { text, width: size, height: size, colorDark:'#0f172a', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      try {
+        new QRCode(elNode, { text, width: size, height: size, colorDark:'#0f172a', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      } catch(e) {}
     }
   });
 }
 
 async function loadSavedRosters(){
-  if(!db || !firebase.auth().currentUser){ state.savedRosters = []; render(); return; }
+  let localRosters = [];
+  try {
+    localRosters = JSON.parse(localStorage.getItem('scoreboard_saved_rosters') || '[]');
+  } catch (e) {}
+
+  if(!db || !firebase.auth || !firebase.auth().currentUser){
+    state.savedRosters = localRosters;
+    render();
+    return;
+  }
   try{
     const uid = firebase.auth().currentUser.uid;
     const snap = await db.ref('rosters/'+uid).once('value');
     const data = snap.val() || {};
-    state.savedRosters = Object.keys(data).map(id=>Object.assign({id}, data[id]));
+    const remoteRosters = Object.keys(data).map(id=>Object.assign({id}, data[id]));
+    state.savedRosters = remoteRosters.length ? remoteRosters : localRosters;
     render();
   }catch(e){
-    console.error('Failed to load saved rosters:', e);
-    state.savedRosters = [];
+    state.savedRosters = localRosters;
     render();
   }
 }
+
 async function saveRoster(teamKey, name){
   const team = getTeam(teamKey);
-  if(!db || !firebase.auth().currentUser) return;
-  const uid = firebase.auth().currentUser.uid;
   const payload = {
-    name: name || team.name || 'Unnamed roster',
-    players: team.players, substitutes: team.substitutes,
+    id: 'r_' + Date.now(),
+    name: (name || team.name || 'Unnamed roster').trim(),
+    players: JSON.parse(JSON.stringify(team.players)),
+    substitutes: JSON.parse(JSON.stringify(team.substitutes)),
     savedAt: Date.now()
   };
-  const ref = db.ref('rosters/'+uid).push();
-  await ref.set(payload);
+  try {
+    const existing = JSON.parse(localStorage.getItem('scoreboard_saved_rosters') || '[]');
+    existing.unshift(payload);
+    localStorage.setItem('scoreboard_saved_rosters', JSON.stringify(existing.slice(0, 20)));
+  } catch (e) {}
+
+  if(db && firebase.auth && firebase.auth().currentUser){
+    try {
+      const uid = firebase.auth().currentUser.uid;
+      const ref = db.ref('rosters/'+uid).push();
+      await ref.set(payload);
+    } catch (e) {}
+  }
   state.savedRosters = null;
+  showToast('Roster "' + payload.name + '" saved!');
   render();
 }
+
 function applyRoster(teamKey, rosterId){
   const roster = (state.savedRosters||[]).find(r=>r.id===rosterId);
   if(!roster) return;
@@ -587,6 +1119,7 @@ function applyRoster(teamKey, rosterId){
   team.name = roster.name;
   team.players = JSON.parse(JSON.stringify(roster.players));
   team.substitutes = JSON.parse(JSON.stringify(roster.substitutes));
+  showToast('Loaded roster "' + roster.name + '"');
   render();
 }
 
@@ -599,147 +1132,18 @@ function generateMatchCode(){
 
 async function hashPassword(pw){
   if (window.crypto && window.crypto.subtle) {
-    const enc = new TextEncoder().encode(pw);
-    const buf = await crypto.subtle.digest('SHA-256', enc);
-    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    try {
+      const enc = new TextEncoder().encode(pw);
+      const buf = await crypto.subtle.digest('SHA-256', enc);
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    } catch (e) {}
   }
-  return btoa(pw);
-}
-
-/* Fields that are the shared "match record" — everything a viewer needs. */
-function buildSyncPayload(){
-  return {
-    admin_uid: (!isLocalPreview && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : 'local-admin',
-    scorer_password_hash: state.scorerPasswordHash || null,
-    format: state.format, maxOvers: state.maxOvers, venue: state.venue,
-    pitch: state.pitch, weather: state.weather,
-    teamA: state.teamA, teamB: state.teamB,
-    tossWinner: state.tossWinner, tossDecision: state.tossDecision,
-    strikerId: state.strikerId, nonStrikerId: state.nonStrikerId,
-    bowlerId: state.bowlerId, previousBowlerId: state.previousBowlerId,
-    innings: state.innings, currentInnings: state.currentInnings,
-    freeHit: state.freeHit, matchComplete: state.matchComplete
-  };
-}
-function pushStateToFirebase(){
-  if(state.role!=='admin' || !syncRef) return;
-  syncRef.set(buildSyncPayload()).catch(err=>console.error('Firebase sync failed:', err));
-}
-function applyRemoteState(data){
-  const preserve = {
-    role: state.role, matchCode: state.matchCode, connected: state.connected,
-    view: state.view, modal: null, history: state.history,
-    step: state.step, tempRole: state.tempRole, tempCode: state.tempCode
-  };
-  Object.assign(state, data, preserve);
-  render();
-}
-async function connectMatch(role, code, password){
-  state.connecting = true;
-  state.connectError = null;
-  render();
-
-  /* Localhost preview fallback when Firebase secrets are not injected yet */
-  if (isLocalPreview || !db) {
-    if (role === 'admin' && !password) {
-      state.connecting = false;
-      state.connectError = 'Set a password to protect this match as its scorer.';
-      render();
-      return;
-    }
-    state.scorerPasswordHash = password ? await hashPassword(password) : null;
-    state.role = role;
-    state.matchCode = code;
-    state.connected = true;
-    state.connecting = false;
-    if (role === 'viewer') state.view = 'scorer';
-    render();
-    return;
-  }
-
-  firebase.auth().signInAnonymously().then(async ()=>{
-    const ref = db.ref('matches/' + code);
-
-    if(role==='admin'){
-      if(!password){
-        state.connecting = false;
-        state.connectError = 'Set a password to protect this match as its scorer.';
-        render();
-        return;
-      }
-      const snap = await ref.once('value');
-      const existing = snap.val();
-      const enteredHash = await hashPassword(password);
-      if(existing && existing.scorer_password_hash){
-        if(enteredHash !== existing.scorer_password_hash){
-          state.connecting = false;
-          state.connectError = 'Incorrect scorer password for this match code.';
-          render();
-          return;
-        }
-      }
-      state.scorerPasswordHash = enteredHash;
-    }
-
-    state.role = role;
-    state.matchCode = code;
-    state.connected = true;
-    state.connecting = false;
-    syncRef = ref;
-    if(role==='viewer'){
-      state.view = 'scorer';
-      syncRef.on('value', snap=>{
-        const data = snap.val();
-        if(data) applyRemoteState(data);
-        else render();
-      }, err=>console.error('Firebase read failed:', err));
-    }
-    render();
-  }).catch(err=>{
-    state.connecting = false;
-    console.error('Firebase auth failed:', err);
-    alert('Could not connect — make sure Anonymous sign-in is enabled in your Firebase console (Authentication → Sign-in method).');
-    render();
-  });
+  return btoa(unescape(encodeURIComponent(pw)));
 }
 
 /* =========================================================
-   STATE
+   STATE & DEMO MATCH BUILDER
    ========================================================= */
-let state = {
-  role: null,             // 'admin' | 'viewer'
-  matchCode: null,
-  connected: false,
-  connecting: false,
-  connectError: null,
-  showQrModal: false,
-  savedRosters: null,
-  tempRosterSaveName: { A:'', B:'' },
-  tempRole: 'admin',
-  tempCode: generateMatchCode(),
-  tempPassword: '',
-  scorerPasswordHash: null,
-  view: 'setup',
-  step: 1,
-  format: 'T20',
-  maxOvers: 20,
-  venue: '',
-  pitch: 'Dry',
-  weather: 'Clear',
-  teamA: { name: 'Team A', players: makeDefaultPlayers('A'), substitutes: makeSubstitutes('A') },
-  teamB: { name: 'Team B', players: makeDefaultPlayers('B'), substitutes: makeSubstitutes('B') },
-  tossWinner: null,
-  tossDecision: null,
-  strikerId: null, nonStrikerId: null, bowlerId: null,
-  previousBowlerId: null,
-  innings: [],           // array of innings objects
-  currentInnings: 0,
-  freeHit: false,
-  matchComplete: false,
-  history: [],           // undo stack: serialized snapshots
-  modal: null            // {type:'wicket'|'newBatsman'|'newBowler'|'runOut', payload}
-};
-
 const BOWLING_ROLES = ['Fast','Fast Medium','Medium Fast','Medium','Off Spin','Leg Spin','Left-arm Orthodox','Left-arm Chinaman','—'];
 
 function makeDefaultPlayers(prefix){
@@ -756,6 +1160,284 @@ function makeSubstitutes(prefix){
   }
   return arr;
 }
+
+const initialAdminCode = generateMatchCode();
+
+let state = {
+  role: null,             // 'admin' | 'viewer'
+  matchCode: null,
+  connected: false,
+  connecting: false,
+  connectError: null,
+  showQrModal: false,
+  showPauseMenu: false,
+  legalModal: null,       // 'privacy' | 'terms' | 'support' | null
+  matchPaused: false,
+  pauseReason: 'Drinks Break',
+  soundEnabled: true,
+  chartMode: 'worm',      // 'worm' | 'manhattan' | 'runrate'
+  selectedOverInspect: null,
+  savedRosters: null,
+  tempRosterSaveName: { A:'', B:'' },
+  tempRole: 'admin',
+  adminDraftCode: initialAdminCode,
+  tempCode: initialAdminCode,
+  tempPassword: '',
+  scorerPasswordHash: null,
+  view: 'setup',
+  step: 1,
+  format: 'T20',
+  maxOvers: 20,
+  venue: '',
+  pitch: 'Dry',
+  weather: 'Clear',
+  teamA: { name: 'Team A', players: makeDefaultPlayers('A'), substitutes: makeSubstitutes('A') },
+  teamB: { name: 'Team B', players: makeDefaultPlayers('B'), substitutes: makeSubstitutes('B') },
+  tossWinner: null,
+  tossDecision: null,
+  strikerId: null, nonStrikerId: null, bowlerId: null,
+  previousBowlerId: null,
+  innings: [],
+  currentInnings: 0,
+  freeHit: false,
+  matchComplete: false,
+  history: [],
+  modal: null
+};
+
+/* Ensure empty arrays stripped by Firebase Realtime Database are safely restored */
+function normalizeMatchData(data) {
+  if (!data) return data;
+  const copy = Object.assign({}, data);
+  copy.innings = (copy.innings || []).map(inn => Object.assign({
+    deliveries: [],
+    fow: [],
+    dismissedOrder: [],
+    battingOrderInPlay: [],
+    outBatsmen: {},
+    target: null
+  }, inn, {
+    deliveries: inn.deliveries || [],
+    fow: inn.fow || [],
+    dismissedOrder: inn.dismissedOrder || []
+  }));
+  if (copy.teamA) {
+    copy.teamA.players = copy.teamA.players || makeDefaultPlayers('A');
+    copy.teamA.substitutes = copy.teamA.substitutes || makeSubstitutes('A');
+  }
+  if (copy.teamB) {
+    copy.teamB.players = copy.teamB.players || makeDefaultPlayers('B');
+    copy.teamB.substitutes = copy.teamB.substitutes || makeSubstitutes('B');
+  }
+  return copy;
+}
+
+function buildSyncPayload(){
+  return {
+    admin_uid: (!isLocalPreview && firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : 'local-admin',
+    scorer_password_hash: state.scorerPasswordHash || null,
+    format: state.format, maxOvers: state.maxOvers, venue: state.venue,
+    pitch: state.pitch, weather: state.weather,
+    teamA: state.teamA, teamB: state.teamB,
+    tossWinner: state.tossWinner, tossDecision: state.tossDecision,
+    strikerId: state.strikerId, nonStrikerId: state.nonStrikerId,
+    bowlerId: state.bowlerId, previousBowlerId: state.previousBowlerId,
+    innings: state.innings, currentInnings: state.currentInnings,
+    freeHit: state.freeHit, matchComplete: state.matchComplete,
+    matchPaused: state.matchPaused, pauseReason: state.pauseReason
+  };
+}
+
+function pushStateToFirebase(){
+  if(state.role !== 'admin') return;
+  const payload = buildSyncPayload();
+  if (state.matchCode) {
+    saveMatchToLocal(state.matchCode, payload);
+  }
+  if(!syncRef) return;
+  syncRef.set(payload).catch(err=>console.error('Firebase sync failed:', err));
+}
+
+function applyRemoteState(data){
+  const normalized = normalizeMatchData(data);
+  const preserve = {
+    role: state.role, matchCode: state.matchCode, connected: state.connected,
+    view: state.view, modal: null, history: state.history,
+    step: state.step, tempRole: state.tempRole, tempCode: state.tempCode,
+    showPauseMenu: state.showPauseMenu, legalModal: state.legalModal,
+    chartMode: state.chartMode, selectedOverInspect: state.selectedOverInspect,
+    soundEnabled: state.soundEnabled
+  };
+  Object.assign(state, normalized, preserve);
+  render();
+}
+
+async function connectMatch(role, rawCode, password){
+  const code = (rawCode || '').trim().toUpperCase();
+  state.connectError = null;
+
+  if (!code || code.length < 3) {
+    state.connectError = 'Invalid Match Code: Please enter a valid 5-character match code provided by your scorer.';
+    playTone('error');
+    render();
+    return;
+  }
+
+  state.connecting = true;
+  render();
+
+  /* Local preview / offline fallback when Firebase secrets are not injected */
+  if (isLocalPreview || !db) {
+    if (role === 'viewer') {
+      const existingLocal = getMatchFromLocal(code);
+      if (!existingLocal) {
+        state.connecting = false;
+        state.connectError = 'Invalid or unavailable Match Code "' + code + '". No active match was found for this code. Please verify the 5-character code with your scorer and try again.';
+        playTone('error');
+        render();
+        return;
+      }
+      Object.assign(state, normalizeMatchData(existingLocal), {
+        role: 'viewer',
+        matchCode: code,
+        connected: true,
+        connecting: false,
+        connectError: null,
+        view: 'scorer',
+        modal: null
+      });
+      showToast('Connected to match ' + code + ' as Viewer');
+      render();
+      return;
+    }
+
+    if (role === 'admin' && !password) {
+      state.connecting = false;
+      state.connectError = 'Please set a scorer password to protect this match before connecting.';
+      playTone('error');
+      render();
+      return;
+    }
+    const enteredHash = password ? await hashPassword(password) : null;
+    const existingLocal = getMatchFromLocal(code);
+    if (existingLocal && existingLocal.scorer_password_hash && existingLocal.scorer_password_hash !== enteredHash) {
+      state.connecting = false;
+      state.connectError = 'Incorrect scorer password for existing match code "' + code + '".';
+      playTone('error');
+      render();
+      return;
+    }
+    if (existingLocal && existingLocal.innings && existingLocal.innings.length > 0) {
+      Object.assign(state, existingLocal);
+      state.view = 'scorer';
+    }
+    state.scorerPasswordHash = enteredHash;
+    state.role = role;
+    state.matchCode = code;
+    state.connected = true;
+    state.connecting = false;
+    saveMatchToLocal(code, buildSyncPayload());
+    showToast('Connected to match ' + code + ' as Scorer');
+    render();
+    return;
+  }
+
+  firebase.auth().signInAnonymously().then(async ()=>{
+    const ref = db.ref('matches/' + code);
+    const snap = await ref.once('value');
+    const existing = snap.val();
+
+    if (role === 'viewer') {
+      if (!existing) {
+        state.connecting = false;
+        state.connectError = 'Invalid or unavailable Match Code "' + code + '". No live match exists with this code. Please verify the 5-character code with your scorer and try again.';
+        playTone('error');
+        render();
+        return;
+      }
+      state.role = 'viewer';
+      state.matchCode = code;
+      state.connected = true;
+      state.connecting = false;
+      state.view = 'scorer';
+      syncRef = ref;
+      applyRemoteState(existing);
+      syncRef.on('value', s => {
+        const data = s.val();
+        if (data) applyRemoteState(data);
+      }, err => console.error('Firebase read failed:', err));
+      showToast('Connected to live match ' + code);
+      return;
+    }
+
+    if(role === 'admin'){
+      if(!password){
+        state.connecting = false;
+        state.connectError = 'Set a password to protect this match as its scorer.';
+        playTone('error');
+        render();
+        return;
+      }
+      const enteredHash = await hashPassword(password);
+      if(existing && existing.scorer_password_hash){
+        if(enteredHash !== existing.scorer_password_hash){
+          state.connecting = false;
+          state.connectError = 'Incorrect scorer password for match code "' + code + '".';
+          playTone('error');
+          render();
+          return;
+        }
+        Object.assign(state, normalizeMatchData(existing));
+        if (state.innings && state.innings.length > 0) state.view = 'scorer';
+      }
+      state.scorerPasswordHash = enteredHash;
+      state.role = 'admin';
+      state.matchCode = code;
+      state.connected = true;
+      state.connecting = false;
+      syncRef = ref;
+      pushStateToFirebase();
+      showToast('Connected as Scorer for match ' + code);
+      render();
+    }
+  }).catch(err=>{
+    state.connecting = false;
+    console.error('Firebase auth failed:', err);
+    state.connectError = 'Could not connect — make sure Anonymous sign-in is enabled in your Firebase console (Authentication → Sign-in method).';
+    playTone('error');
+    render();
+  });
+}
+
+/* Listen for localStorage changes across tabs so Local Preview syncs live between Scorer & Viewer tabs! */
+window.addEventListener('storage', e => {
+  if (state.connected && state.role === 'viewer' && state.matchCode && e.key === 'scoreboard_match_' + state.matchCode) {
+    try {
+      const updated = JSON.parse(e.newValue);
+      if (updated) applyRemoteState(updated);
+    } catch (err) {}
+  }
+});
+
+/* Keyboard shortcut: Escape or P opens/closes the Pause Menu when connected */
+window.addEventListener('keydown', e => {
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+  if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+  if (e.key === 'Escape') {
+    if (state.legalModal) { state.legalModal = null; render(); return; }
+    if (state.showQrModal) { state.showQrModal = false; render(); return; }
+    if (state.modal) { state.modal = null; render(); return; }
+    state.showPauseMenu = !state.showPauseMenu;
+    render();
+  } else if ((e.key === 'p' || e.key === 'P') && state.connected && !state.modal) {
+    state.showPauseMenu = !state.showPauseMenu;
+    render();
+  }
+});
+
+/* =========================================================
+   ENGINE HELPERS
+   ========================================================= */
 function getMaxOversPerBowler(){
   switch(state.format){
     case 'T10': return 2;
@@ -778,30 +1460,31 @@ function freshInnings(battingTeam, bowlingTeam, target){
   };
 }
 
-/* =========================================================
-   ENGINE HELPERS
-   ========================================================= */
 function currentInnings(){ return state.innings[state.currentInnings]; }
-
-function teamById(id){
-  return id.startsWith(playerTeamPrefix('A')) ? state.teamA : state.teamB;
-}
-function playerTeamPrefix(x){ return x; }
-
 function getTeam(teamKey){ return teamKey === 'A' ? state.teamA : state.teamB; }
 
 function findPlayer(id){
   if(!id) return null;
   const pools = [state.teamA.players, state.teamA.substitutes, state.teamB.players, state.teamB.substitutes];
   for(const pool of pools){
+    if(!pool) continue;
     const found = pool.find(p=>p.id===id);
     if(found) return found;
   }
   return null;
 }
 
+function displayPlayerName(id) {
+  const p = findPlayer(id);
+  if (!p) return id || '—';
+  if (p.name && p.name.trim()) return p.name.trim();
+  const teamKey = id.startsWith('A') ? 'A' : 'B';
+  const num = id.replace(/^[AB]/, '');
+  return (getTeam(teamKey).name || ('Team ' + teamKey)) + ' #' + num;
+}
+
 function legalBallCount(inn){
-  return inn.deliveries.filter(d=>d.legal).length;
+  return (inn && inn.deliveries) ? inn.deliveries.filter(d=>d.legal).length : 0;
 }
 function oversStr(inn){
   const legal = legalBallCount(inn);
@@ -810,16 +1493,16 @@ function oversStr(inn){
   return overs+'.'+balls;
 }
 function teamTotal(inn){
-  return inn.deliveries.reduce((s,d)=> s + d.runsOffBat + d.extraRuns, 0);
+  return (inn && inn.deliveries) ? inn.deliveries.reduce((s,d)=> s + d.runsOffBat + d.extraRuns, 0) : 0;
 }
 function teamWickets(inn){
-  return inn.deliveries.filter(d=>d.wicket).length;
+  return (inn && inn.deliveries) ? inn.deliveries.filter(d=>d.wicket).length : 0;
 }
 function battingStatsFor(inn, playerId){
   let runs=0, balls=0, fours=0, sixes=0;
-  inn.deliveries.forEach(d=>{
+  (inn.deliveries || []).forEach(d=>{
     if(d.strikerId===playerId){
-      if(d.extraType!=='Wd' && d.extraType!=='Nb') balls++;
+      if(d.extraType!=='Wd') balls++;
       runs += d.runsOffBat;
       if(d.runsOffBat===4) fours++;
       if(d.runsOffBat===6) sixes++;
@@ -828,21 +1511,22 @@ function battingStatsFor(inn, playerId){
   return {runs, balls, fours, sixes, sr: balls>0 ? ((runs/balls)*100).toFixed(1) : '0.0'};
 }
 function bowlingStatsFor(inn, playerId){
-  const balls = inn.deliveries.filter(d=>d.bowlerId===playerId && d.legal).length;
-  const runs = inn.deliveries.filter(d=>d.bowlerId===playerId)
+  const delivs = inn.deliveries || [];
+  const balls = delivs.filter(d=>d.bowlerId===playerId && d.legal).length;
+  const runs = delivs.filter(d=>d.bowlerId===playerId)
     .reduce((s,d)=> s + d.runsOffBat + (d.extraType==='Wd'||d.extraType==='Nb' ? d.extraRuns : 0), 0);
-  const wkts = inn.deliveries.filter(d=>d.bowlerId===playerId && d.wicket && d.wicket.creditBowler).length;
+  const wkts = delivs.filter(d=>d.bowlerId===playerId && d.wicket && d.wicket.creditBowler).length;
   const overs = Math.floor(balls/6)+'.'+(balls%6);
   const econ = balls>0 ? (runs/(balls/6)).toFixed(2) : '0.00';
   let maidens=0;
   const overGroups = {};
-  inn.deliveries.filter(d=>d.bowlerId===playerId).forEach(d=>{
+  delivs.filter(d=>d.bowlerId===playerId).forEach(d=>{
     overGroups[d.overNum] = overGroups[d.overNum] || [];
     overGroups[d.overNum].push(d);
   });
   Object.values(overGroups).forEach(g=>{
     const legalInOver = g.filter(d=>d.legal).length;
-    const runsInOver = g.reduce((s,d)=>s+d.runsOffBat+d.extraRuns,0);
+    const runsInOver = g.reduce((s,d)=>s+d.runsOffBat+(d.extraType==='Wd'||d.extraType==='Nb'?d.extraRuns:0),0);
     if(legalInOver===6 && runsInOver===0) maidens++;
   });
   return {overs, runs, wkts, econ, maidens};
@@ -850,25 +1534,56 @@ function bowlingStatsFor(inn, playerId){
 
 function pushHistory(){
   state.history.push(JSON.stringify({
-    innings: state.innings, currentInnings: state.currentInnings,
-    strikerId: state.strikerId, nonStrikerId: state.nonStrikerId, bowlerId: state.bowlerId,
-    freeHit: state.freeHit
+    innings: state.innings,
+    currentInnings: state.currentInnings,
+    strikerId: state.strikerId,
+    nonStrikerId: state.nonStrikerId,
+    bowlerId: state.bowlerId,
+    previousBowlerId: state.previousBowlerId,
+    freeHit: state.freeHit,
+    matchComplete: state.matchComplete
   }));
   if(state.history.length>60) state.history.shift();
 }
+
 function undo(){
-  if(state.history.length===0) return;
+  if(state.history.length===0) {
+    showToast('Nothing left to undo', true);
+    return;
+  }
   const snap = JSON.parse(state.history.pop());
   state.innings = snap.innings;
   state.currentInnings = snap.currentInnings;
   state.strikerId = snap.strikerId;
   state.nonStrikerId = snap.nonStrikerId;
   state.bowlerId = snap.bowlerId;
+  state.previousBowlerId = snap.previousBowlerId;
   state.freeHit = snap.freeHit;
+  state.matchComplete = Boolean(snap.matchComplete);
+  state.modal = null;
+  playTone('tick');
+  showToast('Last delivery undone');
   render();
 }
 
-/* ---- core delivery logic ---- */
+function ensurePlayersReady() {
+  if (state.matchPaused) {
+    showToast('Match is currently paused (' + state.pauseReason + '). Resume from the Pause Menu to score.', true);
+    return false;
+  }
+  if (!state.strikerId || !state.nonStrikerId) {
+    state.modal = { type: 'newBatsman', outId: null };
+    render();
+    return false;
+  }
+  if (!state.bowlerId) {
+    state.modal = { type: 'newBowler' };
+    render();
+    return false;
+  }
+  return true;
+}
+
 function recordDelivery(partial){
   const inn = currentInnings();
   const overNum = Math.floor(legalBallCount(inn)/6) + 1;
@@ -903,64 +1618,65 @@ function checkOverComplete(){
 }
 
 function bowlRuns(runs){
+  if (!ensurePlayersReady()) return;
   pushHistory();
   recordDelivery({ runsOffBat: runs, legal:true });
   state.freeHit = false;
   if(runs%2===1) swapStrike();
   checkOverComplete();
+  if (runs === 4 || runs === 6) playTone('boundary');
+  else playTone('tick');
   if(state.bowlerId===null && !state.modal) state.modal = { type:'newBowler' };
   maybeEndInnings();
   render();
 }
 
 function bowlExtra(type){
+  if (!ensurePlayersReady()) return;
   if(type==='Wd'){ openWideModal(); return; }
   if(type==='Nb'){ openNoBallModal(); return; }
   if(type==='B' || type==='Lb'){ openByeModal(type); return; }
 }
 
-function openWideModal(){
-  state.modal = { type:'wide' };
-  render();
-}
+function openWideModal(){ state.modal = { type:'wide' }; render(); }
 function confirmWide(additionalRuns){
   pushHistory();
   recordDelivery({ extraType:'Wd', extraRuns: 1 + additionalRuns, runsOffBat:0, legal:false });
   if(additionalRuns%2===1) swapStrike();
   state.modal = null;
+  playTone('tick');
   maybeEndInnings();
   render();
 }
 
-function openNoBallModal(){
-  state.modal = { type:'noball' };
-  render();
-}
+function openNoBallModal(){ state.modal = { type:'noball' }; render(); }
 function confirmNoBall(runsOffBat){
   pushHistory();
   recordDelivery({ extraType:'Nb', extraRuns:1, runsOffBat, legal:false });
   state.freeHit = true;
   if(runsOffBat%2===1) swapStrike();
   state.modal = null;
+  if (runsOffBat >= 4) playTone('boundary');
+  else playTone('tick');
   maybeEndInnings();
   render();
 }
 
-function openByeModal(type){
-  state.modal = { type:'byes', extraType:type };
-  render();
-}
+function openByeModal(type){ state.modal = { type:'byes', extraType:type }; render(); }
 function confirmByes(type, runs){
   pushHistory();
   recordDelivery({ extraType:type, extraRuns:runs, legal:true });
+  state.freeHit = false;
   if(runs%2===1) swapStrike();
   checkOverComplete();
   state.modal = state.bowlerId===null ? { type:'newBowler' } : null;
+  playTone('tick');
   maybeEndInnings();
   render();
 }
 
 function openWicketModal(){
+  if (!ensurePlayersReady()) return;
   state.modal = { type:'wicket' };
   render();
 }
@@ -969,7 +1685,8 @@ function confirmWicket(dismissalType, fielderId, runOutInfo){
   const creditBowler = ['Bowled','Caught','LBW','Stumped','Hit Wicket'].includes(dismissalType);
   const isFreeHitProtected = state.freeHit && ['Bowled','Caught','LBW','Stumped','Hit Wicket'].includes(dismissalType) && dismissalType!=='Run Out';
   if(isFreeHitProtected){
-    state.modal=null;
+    state.modal = null;
+    showToast('Free Hit delivery — batter cannot be dismissed via ' + dismissalType + '!', true);
     render();
     return;
   }
@@ -980,7 +1697,7 @@ function confirmWicket(dismissalType, fielderId, runOutInfo){
   let runsOffBat = 0;
 
   if(dismissalType==='Run Out'){
-    dismissedId = runOutInfo.who;
+    dismissedId = runOutInfo.who || state.strikerId;
     runsCompleted = runOutInfo.runsCompleted || 0;
     runsOffBat = runsCompleted;
   }
@@ -989,10 +1706,11 @@ function confirmWicket(dismissalType, fielderId, runOutInfo){
     runsOffBat, legal,
     wicket: { dismissedId, dismissalType, fielderId: fielderId||null, creditBowler }
   });
+  state.freeHit = false;
   inn.fow.push({
     wicketNum: teamWickets(inn),
     score: teamTotal(inn),
-    player: findPlayer(dismissedId)?.name || dismissedId,
+    player: displayPlayerName(dismissedId),
     over: oversStr(inn)
   });
   inn.dismissedOrder.push(dismissedId);
@@ -1004,19 +1722,32 @@ function confirmWicket(dismissalType, fielderId, runOutInfo){
   } else {
     state.nonStrikerId = null;
   }
-  state.modal = { type:'newBatsman', outId: dismissedId };
+  playTone('wicket');
   checkOverComplete();
-  maybeEndInnings();
+  const ended = maybeEndInnings();
+  if (!ended) {
+    state.modal = { type:'newBatsman', outId: dismissedId };
+  }
   render();
 }
 
 function confirmNewBatsman(playerId){
+  if (!playerId) return;
   if(state.strikerId===null) state.strikerId = playerId;
-  else state.nonStrikerId = playerId;
-  state.modal = state.bowlerId===null ? {type:'newBowler'} : null;
+  else if(state.nonStrikerId===null) state.nonStrikerId = playerId;
+
+  if (state.strikerId === null || state.nonStrikerId === null) {
+    state.modal = { type: 'newBatsman', outId: null, openers: true };
+  } else if (state.bowlerId === null) {
+    state.modal = { type: 'newBowler' };
+  } else {
+    state.modal = null;
+  }
   render();
 }
+
 function confirmNewBowler(playerId){
+  if (!playerId) return;
   state.bowlerId = playerId;
   state.modal = (state.strikerId===null || state.nonStrikerId===null) ? {type:'newBatsman', outId:null} : null;
   render();
@@ -1024,6 +1755,7 @@ function confirmNewBowler(playerId){
 
 function maybeEndInnings(){
   const inn = currentInnings();
+  if (!inn) return false;
   const wkts = teamWickets(inn);
   const overs = legalBallCount(inn)/6;
   const total = teamTotal(inn);
@@ -1035,29 +1767,134 @@ function maybeEndInnings(){
       const bat2 = inn.bowlingTeam, bowl2 = inn.battingTeam;
       state.innings.push(freshInnings(bat2, bowl2, teamTotal(inn)+1));
       state.currentInnings = 1;
-      state.strikerId=null; state.nonStrikerId=null; state.bowlerId=null; state.freeHit=false;
+      state.strikerId=null; state.nonStrikerId=null; state.bowlerId=null; state.previousBowlerId=null; state.freeHit=false;
       state.modal = {type:'newBatsman', outId:null, openers:true};
+      showToast('Innings 1 complete! Target set: ' + (teamTotal(inn) + 1));
+      return true;
     } else {
       state.view = 'viewer';
       state.modal = null;
       state.matchComplete = true;
+      showToast('Match complete! Final scorecard ready.');
+      return true;
     }
+  }
+  return false;
+}
+
+function forceEndCurrentInnings() {
+  const inn = currentInnings();
+  if (!inn) return;
+  pushHistory();
+  if (state.currentInnings === 0) {
+    const bat2 = inn.bowlingTeam, bowl2 = inn.battingTeam;
+    state.innings.push(freshInnings(bat2, bowl2, teamTotal(inn) + 1));
+    state.currentInnings = 1;
+    state.strikerId = null; state.nonStrikerId = null; state.bowlerId = null; state.previousBowlerId = null; state.freeHit = false;
+    state.showPauseMenu = false;
+    state.modal = { type: 'newBatsman', outId: null, openers: true };
+    showToast('Innings 1 declared/closed. Target: ' + (teamTotal(inn) + 1));
+  } else {
+    state.matchComplete = true;
+    state.showPauseMenu = false;
+    state.modal = null;
+    state.view = 'viewer';
+    showToast('Match concluded! Viewing final scorecard.');
+  }
+  render();
+}
+
+function handleLogoClick() {
+  if (!state.connected) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  if (state.innings.length > 0) {
+    state.view = state.view === 'scorer' ? 'viewer' : 'scorer';
+    showToast('Switched to ' + (state.view === 'scorer' ? 'Live Scorer' : 'Scoreboard'));
+    render();
+  } else {
+    state.view = 'setup';
+    render();
+  }
+}
+
+function disconnectToHome() {
+  if (syncRef && state.role === 'viewer') {
+    try { syncRef.off(); } catch (e) {}
+  }
+  syncRef = null;
+  state.connected = false;
+  state.connecting = false;
+  state.connectError = null;
+  state.showPauseMenu = false;
+  state.modal = null;
+  render();
+}
+
+function openPauseMenu() {
+  state.showPauseMenu = true;
+  render();
+}
+
+function openLegalModal(kind) {
+  state.legalModal = kind;
+  render();
+}
+
+function updateDynamicTitle() {
+  if (!state.connected) {
+    document.title = 'Scoreboard — Live Cricket Broadcast & Scorer';
+    return;
+  }
+  if (state.innings.length > 0) {
+    const inn = currentInnings() || state.innings[state.innings.length - 1];
+    const bat = getTeam(inn.battingTeam).name || 'Team';
+    const bowl = getTeam(inn.bowlingTeam).name || 'Team';
+    const scoreText = teamTotal(inn) + '/' + teamWickets(inn) + ' (' + oversStr(inn) + ')';
+    if (state.matchComplete) {
+      document.title = 'Final: ' + bat + ' vs ' + bowl + ' — Scoreboard';
+    } else if (state.matchPaused) {
+      document.title = '[PAUSED] ' + bat + ' ' + scoreText + ' vs ' + bowl + ' — Scoreboard';
+    } else {
+      document.title = bat + ' ' + scoreText + ' vs ' + bowl + ' · Live — Scoreboard';
+    }
+  } else {
+    document.title = 'Match Setup (' + (state.matchCode || '') + ') — Scoreboard';
   }
 }
 
 /* =========================================================
-   RENDER
+   RENDER PIPELINE
    ========================================================= */
+function el(tag, cls, html){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(html!==undefined) e.innerHTML = html;
+  return e;
+}
+
 function render(){
+  updateDynamicTitle();
   const app = document.getElementById('app');
   app.innerHTML = '';
+
   if(!state.connected){
+    app.appendChild(renderConnectTopbar());
     app.appendChild(renderConnectGate());
+    if (state.showPauseMenu) app.appendChild(renderPauseModal());
+    if (state.legalModal) app.appendChild(renderLegalModal());
     attachQRCodes();
     return;
   }
+
   pushStateToFirebase();
   app.appendChild(renderTopline());
+
+  if (state.matchPaused) {
+    app.appendChild(renderPausedBanner());
+  }
+
   if(state.role==='viewer' && state.innings.length===0){
     app.appendChild(renderWaiting());
   } else {
@@ -1065,93 +1902,240 @@ function render(){
     if(state.view==='scorer') app.appendChild(renderScorer());
     if(state.view==='viewer') app.appendChild(renderViewer());
   }
+
   if(state.modal) app.appendChild(renderModal());
   if(state.showQrModal) app.appendChild(renderQrModal());
+  if(state.showPauseMenu) app.appendChild(renderPauseModal());
+  if(state.legalModal) app.appendChild(renderLegalModal());
   attachQRCodes();
 }
 
-function renderQrModal(){
-  const backdrop = el('div','modal-backdrop');
-  const m = el('div','modal');
-  m.style.textAlign = 'center';
-  m.appendChild(el('h3','','Scan to join as a viewer'));
-  const qrBox = el('div');
-  qrBox.setAttribute('data-qr', buildJoinUrl(state.matchCode));
-  qrBox.setAttribute('data-qr-size','200');
-  qrBox.style.background = '#ffffff';
-  qrBox.style.display = 'inline-block';
-  qrBox.style.padding = '12px';
-  qrBox.style.borderRadius = '12px';
-  qrBox.style.marginBottom = '12px';
-  m.appendChild(qrBox);
-  m.appendChild(el('div','helptext','Or share the code: <b style="color:#34d399;font-family:\'Space Mono\',monospace;">'+state.matchCode+'</b>'));
-  const actions = el('div','modal-actions');
-  actions.style.justifyContent = 'center';
-  const closeBtn = el('button','btn btn-primary','Close');
-  closeBtn.onclick = ()=>{ state.showQrModal = false; render(); };
-  actions.appendChild(closeBtn);
-  m.appendChild(actions);
-  backdrop.appendChild(m);
-  return backdrop;
+function renderConnectTopbar() {
+  const wrap = el('div', 'topline');
+  const logoBtn = el('button', 'brand-btn');
+  logoBtn.type = 'button';
+  logoBtn.title = 'Scoreboard Home';
+  logoBtn.onclick = () => {
+    state.connectError = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    render();
+  };
+  logoBtn.innerHTML =
+    '<span class="brand-icon">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 8.5c2 2 2 5 0 7"/><path d="M15.5 8.5c-2 2-2 5 0 7"/></svg>' +
+    '</span>' +
+    '<div>' +
+      '<div class="brand"><span class="brand-word">SCOREBOARD</span> <span class="brand-dot">·</span> <span class="brand-tag">live cricket scorer</span></div>' +
+      '<div style="font-size:11px;color:#64748b;margin-top:2px;">Real-time ball-by-ball broadcast &amp; analytics</div>' +
+    '</div>';
+  wrap.appendChild(logoBtn);
+
+  const right = el('div', 'nav-right');
+  const menuBtn = el('button', 'pause-trigger-btn', '☰ Menu');
+  menuBtn.type = 'button';
+  menuBtn.onclick = () => { state.showPauseMenu = true; render(); };
+  right.appendChild(menuBtn);
+
+  wrap.appendChild(right);
+  return wrap;
+}
+
+function renderTopline(){
+  const wrap = el('div','topline');
+  const leftWrap = el('div');
+
+  const logoBtn = el('button', 'brand-btn');
+  logoBtn.type = 'button';
+  logoBtn.title = 'Click to switch between Live Scorer & Scoreboard';
+  logoBtn.onclick = handleLogoClick;
+  logoBtn.innerHTML =
+    '<span class="brand-icon">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 8.5c2 2 2 5 0 7"/><path d="M15.5 8.5c-2 2-2 5 0 7"/></svg>' +
+    '</span>' +
+    '<div>' +
+      '<div class="brand"><span class="brand-word">SCOREBOARD</span> <span class="brand-dot">·</span> <span class="brand-tag">live cricket scorer</span></div>' +
+    '</div>';
+  leftWrap.appendChild(logoBtn);
+
+  const badgeLine = el('div','');
+  badgeLine.style.marginTop = '6px';
+  badgeLine.style.display = 'flex';
+  badgeLine.style.alignItems = 'center';
+  badgeLine.style.flexWrap = 'wrap';
+  badgeLine.style.gap = '8px';
+
+  const statusDot = el('span', 'pulse-dot' + (state.matchPaused ? ' amber' : ''));
+  badgeLine.appendChild(statusDot);
+
+  const matchBadge = el('span', 'num', 'Match ' + state.matchCode + ' · ' + (state.role==='admin'?'Scorer (Admin)':'Live Viewer'));
+  matchBadge.style.fontSize = '11.5px';
+  matchBadge.style.color = '#94a3b8';
+  badgeLine.appendChild(matchBadge);
+
+  const qrLink = el('button','footer-link-btn','QR / Invite');
+  qrLink.type = 'button';
+  qrLink.style.color = '#34d399';
+  qrLink.style.fontWeight = '700';
+  qrLink.style.fontSize = '11.5px';
+  qrLink.onclick = ()=>{ state.showQrModal = true; render(); };
+  badgeLine.appendChild(qrLink);
+
+  leftWrap.appendChild(badgeLine);
+  wrap.appendChild(leftWrap);
+
+  const rightWrap = el('div', 'nav-right');
+  const nav = el('div','subnav');
+  const items = state.role==='viewer'
+    ? [['scorer','Live Board'],['viewer','Scoreboard']]
+    : [['setup','Setup'],['scorer','Live Scorer'],['viewer','Scoreboard']];
+
+  items.forEach(([key,label])=>{
+    const btn = el('button', 'subnav-btn' + (state.view===key ? ' active' : ''), label);
+    btn.type = 'button';
+    btn.onclick = ()=>{
+      if (key === 'setup' && state.innings.length > 0) {
+        state.view = 'setup';
+        showToast('Editing match setup & team rosters');
+      } else if (key !== 'setup' && state.innings.length === 0) {
+        showToast('Complete match setup and start play first', true);
+        return;
+      } else {
+        state.view = key;
+      }
+      render();
+    };
+    nav.appendChild(btn);
+  });
+  rightWrap.appendChild(nav);
+
+  const pauseBtn = el('button', 'pause-trigger-btn' + (state.matchPaused ? ' is-paused' : ''),
+    state.matchPaused ? '▶ Paused · Menu' : '⏸ Pause / Menu');
+  pauseBtn.type = 'button';
+  pauseBtn.onclick = () => { state.showPauseMenu = true; render(); };
+  rightWrap.appendChild(pauseBtn);
+
+  wrap.appendChild(rightWrap);
+  return wrap;
+}
+
+function renderPausedBanner() {
+  const banner = el('div', 'pause-live-banner');
+  const left = el('div', '', '<span style="font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">⏸ Match Paused:</span> ' + (state.pauseReason || 'Break in play'));
+  banner.appendChild(left);
+  if (state.role === 'admin') {
+    const resumeBtn = el('button', 'btn btn-amber', '▶ Resume Play');
+    resumeBtn.type = 'button';
+    resumeBtn.style.padding = '6px 14px';
+    resumeBtn.style.fontSize = '12px';
+    resumeBtn.onclick = () => {
+      state.matchPaused = false;
+      showToast('Match resumed!');
+      render();
+    };
+    banner.appendChild(resumeBtn);
+  }
+  return banner;
 }
 
 function renderConnectGate(){
   const wrap = el('div','clipboard');
-  wrap.appendChild(el('div','step-label', isLocalPreview ? 'CONNECT · LOCAL PREVIEW' : 'CONNECT'));
-  wrap.appendChild(el('h2','Join a match'));
+  wrap.appendChild(el('div','step-label', isLocalPreview ? '● LIVE CONSOLE · READY' : '● CLOUD SYNC · READY'));
+  wrap.appendChild(el('h2','Join or score a cricket match'));
+
   wrap.appendChild(fieldChoice('I am the...', ['Scorer (Admin)','Viewer'],
     state.tempRole==='admin' ? 'Scorer (Admin)' : 'Viewer',
-    v=>{ state.tempRole = v==='Scorer (Admin)' ? 'admin' : 'viewer'; state.connectError=null; render(); }));
+    v=>{
+      const newRole = v==='Scorer (Admin)' ? 'admin' : 'viewer';
+      state.tempRole = newRole;
+      state.connectError = null;
+      if (newRole === 'admin' && !state.tempCode) {
+        state.tempCode = state.adminDraftCode;
+      } else if (newRole === 'viewer' && state.tempCode === state.adminDraftCode) {
+        state.tempCode = '';
+      }
+      render();
+    }));
 
   const codeField = el('div','field');
   codeField.appendChild(el('label','', state.tempRole==='admin'
     ? 'Match code — share this with your viewers'
     : 'Enter the match code from your scorer'));
   const codeInput = el('input','num');
-  codeInput.type='text'; codeInput.value=state.tempCode;
+  codeInput.type='text';
+  codeInput.value = state.tempCode;
+  codeInput.placeholder = 'Enter 5-character match code';
+  codeInput.maxLength = 10;
   codeInput.style.textTransform='uppercase';
-  codeInput.style.letterSpacing='0.1em';
+  codeInput.style.letterSpacing='0.12em';
   codeInput.style.fontWeight='700';
-  codeInput.oninput = e=>{ state.tempCode = e.target.value.toUpperCase(); };
+  codeInput.style.fontSize='16px';
+  codeInput.oninput = e=>{
+    state.tempCode = e.target.value.toUpperCase();
+    if (state.tempRole === 'admin') state.adminDraftCode = state.tempCode;
+    if (state.connectError) state.connectError = null;
+  };
   codeField.appendChild(codeInput);
   wrap.appendChild(codeField);
 
   if(state.tempRole==='admin'){
     const pwField = el('div','field');
-    pwField.appendChild(el('label','','Scorer password — set this the first time, then re-enter it to resume scoring'));
+    pwField.appendChild(el('label','','Scorer password — protects scoring controls for this match code'));
     const pwInput = el('input');
-    pwInput.type='password'; pwInput.value=state.tempPassword; pwInput.placeholder='Only you (and whoever you tell) should know this';
-    pwInput.oninput = e=>{ state.tempPassword = e.target.value; };
+    pwInput.type='password';
+    pwInput.value=state.tempPassword;
+    pwInput.placeholder='Create or re-enter scorer password';
+    pwInput.oninput = e=>{
+      state.tempPassword = e.target.value;
+      if (state.connectError) state.connectError = null;
+    };
     pwField.appendChild(pwInput);
     wrap.appendChild(pwField);
 
     const qrField = el('div','field');
-    qrField.appendChild(el('label','','Viewers can scan this instead of typing the code'));
+    qrField.appendChild(el('label','','Instant viewer QR invite'));
+    const qrRow = el('div', '');
+    qrRow.style.display = 'flex';
+    qrRow.style.alignItems = 'center';
+    qrRow.style.gap = '14px';
+    qrRow.style.flexWrap = 'wrap';
     const qrBox = el('div');
-    qrBox.setAttribute('data-qr', buildJoinUrl(state.tempCode));
-    qrBox.setAttribute('data-qr-size','120');
+    qrBox.setAttribute('data-qr', buildJoinUrl(state.tempCode || state.adminDraftCode));
+    qrBox.setAttribute('data-qr-size','108');
     qrBox.style.background = '#ffffff';
     qrBox.style.display = 'inline-block';
-    qrBox.style.padding = '10px';
+    qrBox.style.padding = '8px';
     qrBox.style.borderRadius = '12px';
-    qrField.appendChild(qrBox);
+    qrRow.appendChild(qrBox);
+    const qrInfo = el('div', 'helptext',
+      'Spectators can scan this QR code or type <strong class="num" style="color:#34d399;">' + (state.tempCode || '—') + '</strong> in Viewer mode to watch every ball update live.');
+    qrInfo.style.maxWidth = '360px';
+    qrInfo.style.margin = '0';
+    qrRow.appendChild(qrInfo);
+    qrField.appendChild(qrRow);
     wrap.appendChild(qrField);
   }
 
   wrap.appendChild(el('div','helptext', state.tempRole==='admin'
-    ? 'Viewers only ever need the match code, never this password — that keeps them from accidentally landing in scoring mode.'
-    : 'Your screen updates automatically after every ball the scorer logs.'));
+    ? 'Only the scorer needs the password. Viewers join with just the 5-character match code.'
+    : 'Enter an active match code from your scorer. If a match code does not exist or has not been started, you will be notified immediately.'));
 
   if(state.connectError){
-    wrap.appendChild(el('div','helptext', '<span style="color:#fb7185;font-weight:600;">'+state.connectError+'</span>'));
+    const errBox = el('div', 'error-banner');
+    errBox.innerHTML =
+      '<span style="font-size:16px;line-height:1;">⚠️</span>' +
+      '<div><strong style="color:#fda4af;display:block;margin-bottom:2px;">Match Connection Error</strong>' +
+      '<span>' + state.connectError + '</span></div>';
+    wrap.appendChild(errBox);
   }
 
   const actions = el('div','wizard-actions');
   actions.appendChild(el('div'));
+
   const connectBtn = el('button','btn btn-primary', state.connecting ? 'Connecting…' : 'Connect');
+  connectBtn.type = 'button';
   connectBtn.disabled = state.connecting;
   connectBtn.onclick = ()=>{
-    const code = (state.tempCode || generateMatchCode()).trim().toUpperCase();
+    const code = (state.tempCode || '').trim().toUpperCase();
     connectMatch(state.tempRole, code, state.tempPassword);
   };
   actions.appendChild(connectBtn);
@@ -1161,45 +2145,9 @@ function renderConnectGate(){
 
 function renderWaiting(){
   const p = el('div','paper');
-  p.appendChild(el('h3','Waiting for the scorer'));
-  p.appendChild(el('div','empty-note','Connected to match '+state.matchCode+'. This screen updates the moment your scorer starts logging deliveries.'));
+  p.appendChild(el('h3','Waiting for the scorer to start play'));
+  p.appendChild(el('div','empty-note','Connected to match '+state.matchCode+'. This scoreboard will update automatically as soon as the first ball is logged.'));
   return p;
-}
-
-function el(tag, cls, html){
-  const e = document.createElement(tag);
-  if(cls) e.className = cls;
-  if(html!==undefined) e.innerHTML = html;
-  return e;
-}
-
-function renderTopline(){
-  const wrap = el('div','topline');
-  const brandWrap = el('div');
-  brandWrap.appendChild(el('div','brand','SCOREBOARD <span>·</span> <span style="color:#94a3b8;font-weight:500;font-size:14px;">live cricket scorer</span>'));
-  const badgeLine = el('div','', '<span style="font-size:12px;color:#94a3b8;font-family:\'Space Mono\',monospace;">Match '+state.matchCode+' · '+(state.role==='admin'?'Scorer':'Viewer')+'</span>');
-  badgeLine.style.marginTop = '4px';
-  if(state.role==='admin'){
-    const qrLink = el('span','', ' <span style="font-size:12px;color:#34d399;cursor:pointer;text-decoration:underline;margin-left:8px;font-weight:600;">Show join QR</span>');
-    qrLink.onclick = ()=>{ state.showQrModal = true; render(); };
-    badgeLine.appendChild(qrLink);
-  }
-  brandWrap.appendChild(badgeLine);
-  wrap.appendChild(brandWrap);
-  const nav = el('div','subnav');
-  const items = state.role==='viewer'
-    ? [['scorer','Live Scorer'],['viewer','Scorecard']]
-    : [['setup','Setup'],['scorer','Live Scorer'],['viewer','Scorecard']];
-  items.forEach(([key,label])=>{
-    const s = el('span','', state.view===key ? '<b>'+label+'</b>' : label);
-    s.style.cursor='pointer';
-    if(key!=='setup' || state.innings.length===0){
-      s.onclick = ()=>{ if(key==='setup' && state.innings.length>0) return; state.view=key; render(); };
-    }
-    nav.appendChild(s);
-  });
-  wrap.appendChild(nav);
-  return wrap;
 }
 
 /* ---------------- SETUP WIZARD ---------------- */
@@ -1209,17 +2157,17 @@ function renderSetup(){
   wrap.appendChild(el('div','step-label','STEP '+step+' OF 4'));
 
   if(step===1){
-    wrap.appendChild(el('h2','Match details'));
+    wrap.appendChild(el('h2','Match details & conditions'));
     wrap.appendChild(fieldChoice('Format', ['T10','T20','ODI','Test','Custom'], state.format, v=>{
       state.format=v;
       state.maxOvers = v==='T10'?10:v==='T20'?20:v==='ODI'?50:v==='Test'?90:state.maxOvers;
       render();
     }));
     if(state.format==='Custom'){
-      wrap.appendChild(fieldInputNumber('Max overs per innings', state.maxOvers, v=>state.maxOvers=v));
+      wrap.appendChild(fieldInputNumber('Max overs per innings', state.maxOvers, v=>{ state.maxOvers=Math.max(1, v); }));
     }
     const row = el('div','row2');
-    row.appendChild(fieldTextInline('Venue', state.venue, v=>state.venue=v));
+    row.appendChild(fieldTextInline('Venue / Ground', state.venue, v=>state.venue=v, 'e.g. Oval Ground, Pitch 2'));
     row.appendChild(fieldSelectInline('Pitch condition', ['Dry','Green','Dusty','Damp'], state.pitch, v=>state.pitch=v));
     wrap.appendChild(row);
     wrap.appendChild(fieldSelectInline('Weather', ['Clear','Overcast','Humid','Rain interruption'], state.weather, v=>state.weather=v));
@@ -1227,9 +2175,10 @@ function renderSetup(){
 
   if(step===2){
     wrap.appendChild(el('h2','Team registration'));
+
     ['A','B'].forEach(key=>{
       const team = getTeam(key);
-      wrap.appendChild(fieldTextInline('Team '+key+' name', team.name, v=>team.name=v));
+      wrap.appendChild(fieldTextInline('Team '+key+' name', team.name, v=>team.name=v, 'Team ' + key));
 
       if(state.savedRosters===null){
         state.savedRosters = 'loading';
@@ -1242,7 +2191,7 @@ function renderSetup(){
         loadField.appendChild(el('div','helptext','Loading your saved rosters…'));
       } else {
         const rosterSel = el('select');
-        const blank = el('option','','— none —'); blank.value=''; rosterSel.appendChild(blank);
+        const blank = el('option','','— Select saved squad —'); blank.value=''; rosterSel.appendChild(blank);
         (state.savedRosters||[]).forEach(r=>{
           const opt = el('option','', r.name+' ('+new Date(r.savedAt).toLocaleDateString()+')');
           opt.value = r.id;
@@ -1261,14 +2210,14 @@ function renderSetup(){
       saveNameInput.oninput = e=>{ state.tempRosterSaveName[key] = e.target.value; };
       saveField.appendChild(saveNameInput);
       const saveBtn = el('button','btn btn-ghost','Save Roster');
-      saveBtn.type='button'; saveBtn.style.marginTop='8px';
+      saveBtn.type='button'; saveBtn.style.marginTop='8px'; saveBtn.style.padding='8px 14px'; saveBtn.style.fontSize='12px';
       saveBtn.onclick = ()=>{ saveRoster(key, state.tempRosterSaveName[key] || team.name); };
       saveField.appendChild(saveBtn);
       rosterRow.appendChild(saveField);
       wrap.appendChild(rosterRow);
 
-      wrap.appendChild(el('div','team-list-title','Playing XI — Team '+key));
-      wrap.appendChild(el('div','helptext','Batting style and bowling role drive dismissal/UI logic later.'));
+      wrap.appendChild(el('div','team-list-title','Playing XI — '+(team.name || ('Team '+key))));
+      wrap.appendChild(el('div','helptext','Leave blank to use default player numbers, or enter names below.'));
       team.players.forEach((p,i)=>{
         const row = el('div','player-row');
         const nameInput = el('input'); nameInput.type='text'; nameInput.placeholder='Player '+(i+1)+' name';
@@ -1283,8 +2232,7 @@ function renderSetup(){
         wrap.appendChild(row);
       });
 
-      wrap.appendChild(el('div','team-list-title','Substitutes — Team '+key+' (up to 2)'));
-      wrap.appendChild(el('div','helptext','Available to field, cover an injury, or come in as an impact substitute with bat or ball.'));
+      wrap.appendChild(el('div','team-list-title','Substitutes — '+(team.name || ('Team '+key))+' (up to 2)'));
       team.substitutes.forEach((p,i)=>{
         const row = el('div','player-row');
         const nameInput = el('input'); nameInput.type='text'; nameInput.placeholder='Substitute '+(i+1)+' name';
@@ -1302,31 +2250,63 @@ function renderSetup(){
   }
 
   if(step===3){
+    const nameA = state.teamA.name || 'Team A';
+    const nameB = state.teamB.name || 'Team B';
+    if (!state.tossWinner) state.tossWinner = nameA;
+    if (!state.tossDecision) state.tossDecision = 'Bat';
     wrap.appendChild(el('h2','The toss'));
-    wrap.appendChild(fieldChoice('Who won the toss?', [state.teamA.name||'Team A', state.teamB.name||'Team B'], state.tossWinner, v=>{state.tossWinner=v; render();}));
+    wrap.appendChild(fieldChoice('Who won the toss?', [nameA, nameB], state.tossWinner, v=>{state.tossWinner=v; render();}));
     wrap.appendChild(fieldChoice('Elected to', ['Bat','Bowl'], state.tossDecision, v=>{state.tossDecision=v; render();}));
   }
 
   if(step===4){
-    wrap.appendChild(el('h2','Opening selection'));
+    wrap.appendChild(el('h2','Opening players'));
     const battingFirst = decideBattingTeam();
     const bowlingFirst = battingFirst===state.teamA ? state.teamB : state.teamA;
-    wrap.appendChild(el('div','helptext', (battingFirst.name||'Batting team') + ' bats first, ' + (bowlingFirst.name||'bowling team') + ' bowls first.'));
-    wrap.appendChild(playerSelectField('Striker', battingFirst.players, state.strikerId, v=>state.strikerId=v));
-    wrap.appendChild(playerSelectField('Non-striker', battingFirst.players.filter(p=>p.id!==state.strikerId), state.nonStrikerId, v=>state.nonStrikerId=v));
-    wrap.appendChild(playerSelectField('Opening bowler', bowlingFirst.players, state.bowlerId, v=>state.bowlerId=v));
+    if (!state.strikerId && battingFirst.players[0]) state.strikerId = battingFirst.players[0].id;
+    if (!state.nonStrikerId && battingFirst.players[1]) state.nonStrikerId = battingFirst.players[1].id;
+    if (!state.bowlerId && bowlingFirst.players[0]) state.bowlerId = bowlingFirst.players[0].id;
+
+    wrap.appendChild(el('div','helptext', (battingFirst.name||'Batting team') + ' bats first · ' + (bowlingFirst.name||'Bowling team') + ' bowls first.'));
+    wrap.appendChild(playerSelectField('Striker (faces first ball)', battingFirst.players, state.strikerId, v=>{
+      state.strikerId = v;
+      if (state.nonStrikerId === v) {
+        const alt = battingFirst.players.find(p => p.id !== v);
+        state.nonStrikerId = alt ? alt.id : null;
+      }
+      render();
+    }));
+    wrap.appendChild(playerSelectField('Non-striker', battingFirst.players.filter(p=>p.id!==state.strikerId), state.nonStrikerId, v=>{ state.nonStrikerId=v; render(); }));
+    wrap.appendChild(playerSelectField('Opening bowler', bowlingFirst.players, state.bowlerId, v=>{ state.bowlerId=v; render(); }));
   }
 
   const actions = el('div','wizard-actions');
-  const back = el('button','btn btn-ghost','Back');
+  const back = el('button','btn btn-ghost','← Back');
+  back.type = 'button';
   back.disabled = step===1;
   back.onclick = ()=>{ state.step=Math.max(1,step-1); render(); };
-  const next = el('button','btn btn-primary', step<4 ? 'Continue' : 'Start match');
+
+  const rightBtns = el('div', '');
+  rightBtns.style.display = 'flex';
+  rightBtns.style.gap = '8px';
+
+  if (state.innings.length > 0) {
+    const returnBtn = el('button', 'btn btn-ghost', 'Return to Match');
+    returnBtn.type = 'button';
+    returnBtn.onclick = () => { state.view = 'scorer'; render(); };
+    rightBtns.appendChild(returnBtn);
+  }
+
+  const next = el('button','btn btn-primary', step<4 ? 'Continue →' : (state.innings.length > 0 ? 'Save & Return' : 'Start Match 🏏'));
+  next.type = 'button';
   next.onclick = ()=>{
     if(step<4){ state.step++; render(); }
     else startMatch();
   };
-  actions.appendChild(back); actions.appendChild(next);
+  rightBtns.appendChild(next);
+
+  actions.appendChild(back);
+  actions.appendChild(rightBtns);
   wrap.appendChild(actions);
   return wrap;
 }
@@ -1341,11 +2321,22 @@ function decideBattingTeam(){
 }
 
 function startMatch(){
+  if (state.innings.length > 0) {
+    state.view = 'scorer';
+    showToast('Match settings updated');
+    render();
+    return;
+  }
   const battingFirst = decideBattingTeam();
   const bowlingFirst = battingFirst===state.teamA ? state.teamB : state.teamA;
+  if (!state.strikerId) state.strikerId = battingFirst.players[0].id;
+  if (!state.nonStrikerId || state.nonStrikerId === state.strikerId) state.nonStrikerId = battingFirst.players[1].id;
+  if (!state.bowlerId) state.bowlerId = bowlingFirst.players[0].id;
+
   state.innings = [ freshInnings(battingFirst===state.teamA?'A':'B', bowlingFirst===state.teamA?'A':'B', null) ];
   state.currentInnings = 0;
   state.view = 'scorer';
+  showToast('Play started! ' + (battingFirst.name || 'Team A') + ' batting first.');
   render();
 }
 
@@ -1365,15 +2356,16 @@ function fieldChoice(label, options, current, onChange){
 function fieldInputNumber(label, value, onChange){
   const f = el('div','field');
   f.appendChild(el('label','',label));
-  const i = el('input'); i.type='number'; i.value=value;
-  i.oninput = e=>onChange(parseInt(e.target.value)||0);
+  const i = el('input'); i.type='number'; i.value=value; i.min=1; i.max=200;
+  i.oninput = e=>onChange(parseInt(e.target.value)||1);
   f.appendChild(i);
   return f;
 }
-function fieldTextInline(label, value, onChange){
+function fieldTextInline(label, value, onChange, placeholder){
   const f = el('div','field');
   f.appendChild(el('label','',label));
   const i = el('input'); i.type='text'; i.value=value;
+  if (placeholder) i.placeholder = placeholder;
   i.oninput = e=>onChange(e.target.value);
   f.appendChild(i);
   return f;
@@ -1391,9 +2383,9 @@ function playerSelectField(label, players, value, onChange){
   const f = el('div','field');
   f.appendChild(el('label','',label));
   const s = el('select');
-  const blank = el('option','','Select player'); blank.value=''; s.appendChild(blank);
   players.forEach(p=>{
-    const opt = el('option','', p.name || p.id); opt.value = p.id;
+    const opt = el('option','', displayPlayerName(p.id));
+    opt.value = p.id;
     if(p.id===value) opt.selected=true;
     s.appendChild(opt);
   });
@@ -1403,8 +2395,20 @@ function playerSelectField(label, players, value, onChange){
 }
 
 /* ---------------- LIVE SCORER ---------------- */
+function currentPartnership(inn) {
+  let runs = 0, balls = 0;
+  for (let i = inn.deliveries.length - 1; i >= 0; i--) {
+    const d = inn.deliveries[i];
+    if (d.wicket) break;
+    runs += d.runsOffBat + d.extraRuns;
+    if (d.legal) balls++;
+  }
+  return { runs, balls };
+}
+
 function renderScorer(){
   const inn = currentInnings();
+  if (!inn) return renderWaiting();
   const frag = el('div');
   const battingTeam = getTeam(inn.battingTeam);
   const bowlingTeam = getTeam(inn.bowlingTeam);
@@ -1412,105 +2416,182 @@ function renderScorer(){
   const board = el('div','board');
   const top = el('div','board-top');
   const left = el('div');
-  left.appendChild(el('div','board-teams', battingTeam.name+' vs '+bowlingTeam.name+' · Innings '+(state.currentInnings+1)));
+  left.appendChild(el('div','board-teams',
+    '<span>' + battingTeam.name + ' vs ' + bowlingTeam.name + '</span>' +
+    '<span style="color:#64748b;">·</span>' +
+    '<span style="color:#38bdf8;">Innings ' + (state.currentInnings+1) + ' (' + state.format + ')</span>'
+  ));
   left.appendChild(el('div','board-score num', teamTotal(inn)+' / '+teamWickets(inn)));
-  const crr = legalBallCount(inn)>0 ? (teamTotal(inn)/(legalBallCount(inn)/6)).toFixed(2) : '0.00';
-  left.appendChild(el('div','board-sub', oversStr(inn)+' overs · CRR '+crr + (inn.target ? ' · Target '+inn.target : '')));
+  const legalBalls = legalBallCount(inn);
+  const crr = legalBalls>0 ? (teamTotal(inn)/(legalBalls/6)).toFixed(2) : '0.00';
+  const part = currentPartnership(inn);
+  left.appendChild(el('div','board-sub',
+    oversStr(inn)+' overs · CRR '+crr +
+    ' · Partnership '+part.runs+' ('+part.balls+')' +
+    (inn.target ? ' · Target '+inn.target : '')
+  ));
   top.appendChild(left);
 
   const oStat = el('div','board-stat');
-  oStat.appendChild(el('div','label','overs / max'));
+  oStat.appendChild(el('div','label','Overs / Quota'));
   oStat.appendChild(el('div','value num', oversStr(inn)+' / '+state.maxOvers));
+  const projected = legalBalls >= 6 ? Math.round((teamTotal(inn) / (legalBalls / 6)) * state.maxOvers) : null;
+  if (projected && !inn.target) {
+    oStat.appendChild(el('div','label','Proj: ~'+projected));
+  }
   top.appendChild(oStat);
 
   const rStat = el('div','board-stat');
   if(inn.target){
     const remaining = inn.target - teamTotal(inn);
-    const ballsLeft = state.maxOvers*6 - legalBallCount(inn);
-    const rrr = ballsLeft>0 ? (remaining/(ballsLeft/6)).toFixed(2) : '—';
-    rStat.appendChild(el('div','label','need'));
-    rStat.appendChild(el('div','value num', Math.max(remaining,0)+' off '+ballsLeft));
+    const ballsLeft = Math.max(0, state.maxOvers*6 - legalBalls);
+    const rrr = ballsLeft>0 ? (Math.max(0, remaining)/(ballsLeft/6)).toFixed(2) : '—';
+    rStat.appendChild(el('div','label','Equation'));
+    rStat.appendChild(el('div','value num', Math.max(remaining,0)+' off '+ballsLeft+'b'));
     rStat.appendChild(el('div','label','RRR '+rrr));
   } else {
-    rStat.appendChild(el('div','label','target'));
-    rStat.appendChild(el('div','value num','—'));
+    rStat.appendChild(el('div','label','Venue & Pitch'));
+    rStat.appendChild(el('div','value', '<span style="font-size:14px;">'+(state.venue || 'Main Ground')+'</span>'));
+    rStat.appendChild(el('div','label', state.pitch+' · '+state.weather));
   }
   top.appendChild(rStat);
   board.appendChild(top);
 
-  if(state.freeHit) board.appendChild(el('div','freehit-banner','FREE HIT — next legal ball'));
+  if(state.freeHit) board.appendChild(el('div','freehit-banner','⚡ FREE HIT — Next Legal Delivery (No Bowler/Fielder Wickets Except Run Out)'));
 
   const mid = el('div','board-mid');
   const strikePanel = el('div','player-panel');
-  strikePanel.appendChild(el('div','panel-title','BATTING'));
+  const batHeader = el('div','panel-title');
+  batHeader.innerHTML = '<span>BATTING CREASE</span>';
+  if (state.role === 'admin') {
+    const swapBtn = el('button', 'footer-link-btn', '⇄ Swap Ends');
+    swapBtn.type = 'button';
+    swapBtn.style.color = '#34d399';
+    swapBtn.style.fontWeight = '700';
+    swapBtn.onclick = () => {
+      swapStrike();
+      showToast('Strike rotated manually');
+      render();
+    };
+    batHeader.appendChild(swapBtn);
+  }
+  strikePanel.appendChild(batHeader);
+
   [state.strikerId, state.nonStrikerId].forEach(pid=>{
     if(!pid) return;
-    const p = findPlayer(pid);
     const st = battingStatsFor(inn, pid);
     const line = el('div','p-line');
-    line.appendChild(el('span','name'+(pid===state.strikerId?' strike':''), p?.name||pid));
-    line.appendChild(el('span','figs num', st.runs+' ('+st.balls+') SR '+st.sr));
+    line.appendChild(el('span','name'+(pid===state.strikerId?' strike':''), displayPlayerName(pid)));
+    line.appendChild(el('span','figs num', st.runs+' ('+st.balls+') · 4s:'+st.fours+' 6s:'+st.sixes+' · SR '+st.sr));
     strikePanel.appendChild(line);
   });
   mid.appendChild(strikePanel);
 
   const bowlPanel = el('div','player-panel');
-  bowlPanel.appendChild(el('div','panel-title','BOWLING'));
+  const bowlHeader = el('div','panel-title');
+  bowlHeader.innerHTML = '<span>CURRENT BOWLER &amp; OVER</span>';
+  if (state.role === 'admin') {
+    const chgBtn = el('button', 'footer-link-btn', 'Change Bowler');
+    chgBtn.type = 'button';
+    chgBtn.style.color = '#38bdf8';
+    chgBtn.style.fontWeight = '700';
+    chgBtn.onclick = () => { state.modal = { type: 'newBowler' }; render(); };
+    bowlHeader.appendChild(chgBtn);
+  }
+  bowlPanel.appendChild(bowlHeader);
+
   if(state.bowlerId){
-    const p = findPlayer(state.bowlerId);
     const bs = bowlingStatsFor(inn, state.bowlerId);
     const maxOv = getMaxOversPerBowler();
     const line = el('div','p-line');
-    line.appendChild(el('span','name', p?.name||state.bowlerId));
-    line.appendChild(el('span','figs num', bs.overs+'-'+bs.maidens+'-'+bs.runs+'-'+bs.wkts));
+    line.appendChild(el('span','name', displayPlayerName(state.bowlerId)));
+    line.appendChild(el('span','figs num', bs.overs+'-'+bs.maidens+'-'+bs.runs+'-'+bs.wkts+' · Econ '+bs.econ));
     bowlPanel.appendChild(line);
     if(isFinite(maxOv)){
-      bowlPanel.appendChild(el('div','p-line', '<span style="font-size:11px;color:#94a3b8;">Limit '+bs.overs+' / '+maxOv+' overs</span>'));
+      bowlPanel.appendChild(el('div','p-line', '<span style="font-size:11px;color:#94a3b8;">Quota: '+bs.overs+' / '+maxOv+' overs max</span>'));
     }
   }
-  const legal = legalBallCount(inn);
-  const thisOverBalls = inn.deliveries.filter(d=> d.overNum===Math.floor(legal/6)+1 );
+  const currentOverNum = Math.floor(legalBalls/6)+1;
+  const thisOverBalls = inn.deliveries.filter(d=> d.overNum===currentOverNum );
   const timeline = el('div','over-timeline');
-  thisOverBalls.forEach(d=>{
-    let label, cls='ball-pill';
-    if(d.extraType==='Wd'){
-      const additional = d.extraRuns - 1;
-      label = 'Wd' + (additional>0 ? '+'+additional : '');
-      cls+=' x';
-    } else if(d.extraType==='Nb'){
-      label = 'Nb' + (d.runsOffBat>0 ? '+'+d.runsOffBat : '');
-      cls+=' x';
-    } else if(d.extraType==='B' || d.extraType==='Lb'){
-      label = d.extraType + d.extraRuns;
-      cls+=' x';
-    } else {
-      label = d.runsOffBat.toString();
-    }
-    if(d.wicket){ label='W'; cls+=' w'; }
-    timeline.appendChild(el('div',cls,label));
-  });
+  if (thisOverBalls.length === 0) {
+    timeline.appendChild(el('span', 'empty-note', 'New over (' + currentOverNum + ') ready…'));
+  } else {
+    thisOverBalls.forEach(d=>{
+      let label, cls='ball-pill';
+      if(d.extraType==='Wd'){
+        const additional = d.extraRuns - 1;
+        label = 'Wd' + (additional>0 ? '+'+additional : '');
+        cls+=' x';
+      } else if(d.extraType==='Nb'){
+        label = 'Nb' + (d.runsOffBat>0 ? '+'+d.runsOffBat : '');
+        cls+=' x';
+      } else if(d.extraType==='B' || d.extraType==='Lb'){
+        label = d.extraType + d.extraRuns;
+        cls+=' x';
+      } else {
+        label = d.runsOffBat.toString();
+        if (d.runsOffBat === 4) cls += ' b4';
+        if (d.runsOffBat === 6) cls += ' b6';
+      }
+      if(d.wicket){ label='W'; cls='ball-pill w'; }
+      timeline.appendChild(el('div',cls,label));
+    });
+  }
   bowlPanel.appendChild(timeline);
   mid.appendChild(bowlPanel);
   board.appendChild(mid);
   frag.appendChild(board);
 
   if(state.role!=='admin'){
+    const viewerHint = el('div', 'paper');
+    viewerHint.style.display = 'flex';
+    viewerHint.style.flexWrap = 'wrap';
+    viewerHint.style.justifyContent = 'space-between';
+    viewerHint.style.alignItems = 'center';
+    viewerHint.style.gap = '12px';
+    viewerHint.innerHTML = '<div><strong style="color:#ffffff;">Live Viewer Mode</strong><div style="font-size:12.5px;color:#94a3b8;margin-top:2px;">Want to inspect Worm/Manhattan graphs and full batting &amp; bowling cards?</div></div>';
+    const goCardBtn = el('button', 'btn btn-primary', 'Open Full Scoreboard & Graphs →');
+    goCardBtn.type = 'button';
+    goCardBtn.onclick = () => { state.view = 'viewer'; render(); };
+    viewerHint.appendChild(goCardBtn);
+    frag.appendChild(viewerHint);
     return frag;
   }
 
   const controls = el('div','controls');
   const topCtrl = el('div','ctrl-toprow');
-  topCtrl.appendChild(el('div','serif','Log delivery'));
-  const undoBtn = el('button','chip undo','Undo');
+  topCtrl.appendChild(el('div','serif','Ball-by-Ball Scoring Console'));
+  const ctrlRight = el('div', '');
+  ctrlRight.style.display = 'flex';
+  ctrlRight.style.gap = '8px';
+  ctrlRight.style.alignItems = 'center';
+
+  const pauseQuick = el('button', 'chip undo', state.matchPaused ? '▶ Resume' : '⏸ Pause');
+  pauseQuick.type = 'button';
+  pauseQuick.onclick = () => {
+    state.matchPaused = !state.matchPaused;
+    showToast(state.matchPaused ? 'Match Paused' : 'Match Resumed');
+    render();
+  };
+  ctrlRight.appendChild(pauseQuick);
+
+  const undoBtn = el('button','chip undo','↶ Undo Last Ball');
+  undoBtn.type = 'button';
+  undoBtn.disabled = state.history.length === 0;
   undoBtn.onclick = undo;
-  topCtrl.appendChild(undoBtn);
+  ctrlRight.appendChild(undoBtn);
+  topCtrl.appendChild(ctrlRight);
   controls.appendChild(topCtrl);
 
   const runsSec = el('div','ctrl-section');
   runsSec.appendChild(el('div','ctrl-label','RUNS OFF BAT'));
   const runsRow = el('div','chip-row');
   [0,1,2,3,4,6].forEach(r=>{
-    const b = el('button','chip', r);
+    const cls = 'chip num' + (r===4 ? ' boundary-4' : r===6 ? ' boundary-6' : '');
+    const b = el('button', cls, r === 0 ? '0 (Dot)' : r.toString());
+    b.type = 'button';
+    b.disabled = state.matchPaused;
     b.onclick = ()=>bowlRuns(r);
     runsRow.appendChild(b);
   });
@@ -1520,8 +2601,10 @@ function renderScorer(){
   const extrasSec = el('div','ctrl-section');
   extrasSec.appendChild(el('div','ctrl-label','EXTRAS'));
   const extrasRow = el('div','chip-row');
-  [['Wd','Wide'],['Nb','No ball'],['B','Bye'],['Lb','Leg bye']].forEach(([code,label])=>{
+  [['Wd','Wide (+1)'],['Nb','No Ball (+1)'],['B','Byes'],['Lb','Leg Byes']].forEach(([code,label])=>{
     const b = el('button','chip extra', label);
+    b.type = 'button';
+    b.disabled = state.matchPaused;
     b.onclick = ()=>bowlExtra(code);
     extrasRow.appendChild(b);
   });
@@ -1529,11 +2612,27 @@ function renderScorer(){
   controls.appendChild(extrasSec);
 
   const wicketSec = el('div','ctrl-section');
-  wicketSec.appendChild(el('div','ctrl-label','WICKET'));
+  wicketSec.appendChild(el('div','ctrl-label','DISMISSAL &amp; TACTICAL'));
   const wRow = el('div','chip-row');
-  const wBtn = el('button','chip wicket','W — Wicket');
+  const wBtn = el('button','chip wicket','W — Log Wicket');
+  wBtn.type = 'button';
+  wBtn.disabled = state.matchPaused;
   wBtn.onclick = openWicketModal;
   wRow.appendChild(wBtn);
+
+  const retireBtn = el('button', 'chip', 'Retire / Sub');
+  retireBtn.type = 'button';
+  retireBtn.style.fontSize = '13px';
+  retireBtn.disabled = state.matchPaused;
+  retireBtn.onclick = () => { state.modal = { type: 'retire' }; render(); };
+  wRow.appendChild(retireBtn);
+
+  const menuOpenBtn = el('button', 'chip', '☰ More Options');
+  menuOpenBtn.type = 'button';
+  menuOpenBtn.style.fontSize = '13px';
+  menuOpenBtn.onclick = () => { state.showPauseMenu = true; render(); };
+  wRow.appendChild(menuOpenBtn);
+
   wicketSec.appendChild(wRow);
   controls.appendChild(wicketSec);
 
@@ -1541,7 +2640,348 @@ function renderScorer(){
   return frag;
 }
 
-/* ---------------- MODALS ---------------- */
+/* =========================================================
+   PAUSE MENU & MORE OPTIONS MODAL
+   ========================================================= */
+function renderPauseModal() {
+  const backdrop = el('div', 'modal-backdrop');
+  backdrop.onclick = e => { if (e.target === backdrop) { state.showPauseMenu = false; render(); } };
+  const m = el('div', 'modal wide-modal');
+
+  const hdr = el('div', '');
+  hdr.style.display = 'flex';
+  hdr.style.justifyContent = 'space-between';
+  hdr.style.alignItems = 'center';
+  hdr.style.borderBottom = '1px solid #1e293b';
+  hdr.style.paddingBottom = '12px';
+  hdr.style.marginBottom = '14px';
+  hdr.innerHTML =
+    '<div>' +
+      '<div class="step-label" style="margin-bottom:4px;">MATCH COMMAND CENTER</div>' +
+      '<h3 style="margin:0;">Pause &amp; Quick Navigation Menu</h3>' +
+    '</div>';
+  const closeTop = el('button', 'btn btn-ghost', '✕');
+  closeTop.type = 'button';
+  closeTop.style.padding = '6px 12px';
+  closeTop.onclick = () => { state.showPauseMenu = false; render(); };
+  hdr.appendChild(closeTop);
+  m.appendChild(hdr);
+
+  /* Live Match Pause Toggle (when connected as Admin) */
+  if (state.connected && state.role === 'admin' && state.innings.length > 0 && !state.matchComplete) {
+    const pauseBox = el('div', '');
+    pauseBox.style.background = '#060b14';
+    pauseBox.style.border = '1px solid ' + (state.matchPaused ? '#f59e0b' : '#1e293b');
+    pauseBox.style.borderRadius = '14px';
+    pauseBox.style.padding = '14px';
+    pauseBox.style.marginBottom = '16px';
+
+    const pTop = el('div', '');
+    pTop.style.display = 'flex';
+    pTop.style.flexWrap = 'wrap';
+    pTop.style.justifyContent = 'space-between';
+    pTop.style.alignItems = 'center';
+    pTop.style.gap = '10px';
+    pTop.innerHTML =
+      '<div>' +
+        '<div style="font-size:13px;font-weight:700;color:#ffffff;">' +
+          (state.matchPaused ? '⏸ Match is Currently PAUSED' : '🟢 Match is LIVE in Progress') +
+        '</div>' +
+        '<div style="font-size:11.5px;color:#94a3b8;margin-top:2px;">Broadcast a break status to all connected viewers</div>' +
+      '</div>';
+
+    const togglePauseBtn = el('button', state.matchPaused ? 'btn btn-primary' : 'btn btn-amber',
+      state.matchPaused ? '▶ Resume Match' : '⏸ Pause Match');
+    togglePauseBtn.type = 'button';
+    togglePauseBtn.style.padding = '8px 14px';
+    togglePauseBtn.style.fontSize = '12.5px';
+    togglePauseBtn.onclick = () => {
+      state.matchPaused = !state.matchPaused;
+      showToast(state.matchPaused ? 'Match paused (' + state.pauseReason + ')' : 'Match resumed!');
+      render();
+    };
+    pTop.appendChild(togglePauseBtn);
+    pauseBox.appendChild(pTop);
+
+    const reasonRow = el('div', '');
+    reasonRow.style.marginTop = '10px';
+    reasonRow.innerHTML = '<label style="font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:6px;">Break / Pause Reason</label>';
+    const reasonSel = el('select');
+    ['Drinks Break','Rain Delay','Innings Break','Tactical Timeout','Third Umpire Review','Injury Halt','Bad Light'].forEach(r => {
+      const opt = el('option', '', r);
+      opt.value = r;
+      if (state.pauseReason === r) opt.selected = true;
+      reasonSel.appendChild(opt);
+    });
+    reasonSel.onchange = e => {
+      state.pauseReason = e.target.value;
+      if (state.matchPaused) render();
+    };
+    reasonRow.appendChild(reasonSel);
+    pauseBox.appendChild(reasonRow);
+    m.appendChild(pauseBox);
+  }
+
+  /* Primary Navigation Options */
+  m.appendChild(el('div', 'ctrl-label', 'NAVIGATION'));
+  const navGrid = el('div', 'pause-grid');
+
+  const homeBtn = el('button', 'pause-card-btn');
+  homeBtn.type = 'button';
+  homeBtn.innerHTML = '<div class="p-title">🏠 Home / Match Lobby</div><div class="p-desc">Return to Connect screen, switch match code, or start a new game</div>';
+  homeBtn.onclick = () => disconnectToHome();
+  navGrid.appendChild(homeBtn);
+
+  const sbBtn = el('button', 'pause-card-btn');
+  sbBtn.type = 'button';
+  sbBtn.innerHTML = '<div class="p-title">📊 Scoreboard &amp; Graph</div><div class="p-desc">View full batting/bowling cards, Worm &amp; Manhattan graphs, and partnerships</div>';
+  sbBtn.onclick = () => {
+    if (!state.connected) {
+      state.showPauseMenu = false;
+      showToast('Connect to a match first to view the scoreboard.', true);
+      render();
+      return;
+    }
+    state.view = 'viewer';
+    state.showPauseMenu = false;
+    render();
+  };
+  navGrid.appendChild(sbBtn);
+
+  const scorerNavBtn = el('button', 'pause-card-btn');
+  scorerNavBtn.type = 'button';
+  scorerNavBtn.innerHTML = '<div class="p-title">🏏 Live Scorer Console</div><div class="p-desc">Go to the live ball-by-ball scoreboard and scoring keypad</div>';
+  scorerNavBtn.onclick = () => {
+    if (!state.connected || state.innings.length === 0) {
+      state.showPauseMenu = false;
+      showToast('Complete match setup and start the match first.', true);
+      render();
+      return;
+    }
+    state.view = 'scorer';
+    state.showPauseMenu = false;
+    render();
+  };
+  navGrid.appendChild(scorerNavBtn);
+
+  const setupNavBtn = el('button', 'pause-card-btn');
+  setupNavBtn.type = 'button';
+  setupNavBtn.disabled = state.connected && state.role === 'viewer';
+  setupNavBtn.innerHTML = '<div class="p-title">⚙️ Match Setup &amp; Squads</div><div class="p-desc">Edit team names, playing XI, venue, overs, or saved rosters</div>';
+  setupNavBtn.onclick = () => {
+    if (!state.connected) {
+      state.role = 'admin';
+      state.matchCode = state.tempCode || generateMatchCode();
+      state.connected = true;
+    }
+    state.view = 'setup';
+    state.showPauseMenu = false;
+    render();
+  };
+  navGrid.appendChild(setupNavBtn);
+  m.appendChild(navGrid);
+
+  /* More Match & Tactical Options */
+  m.appendChild(el('div', 'ctrl-label', 'MORE OPTIONS &amp; MATCH TOOLS'));
+  m.lastChild.style.marginTop = '16px';
+  const moreGrid = el('div', 'pause-grid');
+
+  if (state.connected && state.role === 'admin' && state.innings.length > 0 && !state.matchComplete) {
+    const swapCard = el('button', 'pause-card-btn');
+    swapCard.type = 'button';
+    swapCard.innerHTML = '<div class="p-title">🔄 Swap Striker Ends</div><div class="p-desc">Manually rotate strike between current batters</div>';
+    swapCard.onclick = () => {
+      swapStrike();
+      state.showPauseMenu = false;
+      showToast('Strike rotated manually');
+      render();
+    };
+    moreGrid.appendChild(swapCard);
+
+    const bowlerCard = el('button', 'pause-card-btn');
+    bowlerCard.type = 'button';
+    bowlerCard.innerHTML = '<div class="p-title">🎯 Change Bowler</div><div class="p-desc">Assign a new or replacement bowler for the current over</div>';
+    bowlerCard.onclick = () => {
+      state.showPauseMenu = false;
+      state.modal = { type: 'newBowler' };
+      render();
+    };
+    moreGrid.appendChild(bowlerCard);
+
+    const endInnCard = el('button', 'pause-card-btn');
+    endInnCard.type = 'button';
+    endInnCard.innerHTML = '<div class="p-title">🏁 Declare / End Innings</div><div class="p-desc">' +
+      (state.currentInnings === 0 ? 'Close 1st innings now and begin the 2nd innings chase' : 'Conclude 2nd innings and finalize match result') + '</div>';
+    endInnCard.onclick = () => forceEndCurrentInnings();
+    moreGrid.appendChild(endInnCard);
+  }
+
+  if (state.connected && state.matchCode) {
+    const qrCard = el('button', 'pause-card-btn');
+    qrCard.type = 'button';
+    qrCard.innerHTML = '<div class="p-title">📲 Share Match QR &amp; Code</div><div class="p-desc">Show QR code and invite link for match ' + state.matchCode + '</div>';
+    qrCard.onclick = () => {
+      state.showPauseMenu = false;
+      state.showQrModal = true;
+      render();
+    };
+    moreGrid.appendChild(qrCard);
+  }
+
+  const soundCard = el('button', 'pause-card-btn');
+  soundCard.type = 'button';
+  soundCard.innerHTML = '<div class="p-title">' + (state.soundEnabled ? '🔊 Sound Effects: ON' : '🔇 Sound Effects: OFF') + '</div><div class="p-desc">Toggle stadium audio synthesizer for boundaries &amp; wickets</div>';
+  soundCard.onclick = () => {
+    state.soundEnabled = !state.soundEnabled;
+    if (state.soundEnabled) playTone('boundary');
+    render();
+  };
+  moreGrid.appendChild(soundCard);
+
+  if (state.connected && state.innings.length > 0) {
+    const posterCard = el('button', 'pause-card-btn');
+    posterCard.type = 'button';
+    posterCard.innerHTML = '<div class="p-title">📸 Export Scorecard PNG</div><div class="p-desc">Generate &amp; download a 1080×1350 broadcast summary poster</div>';
+    posterCard.onclick = () => {
+      state.showPauseMenu = false;
+      shareScorecardImage();
+      render();
+    };
+    moreGrid.appendChild(posterCard);
+
+    const jsonCard = el('button', 'pause-card-btn');
+    jsonCard.type = 'button';
+    jsonCard.innerHTML = '<div class="p-title">💾 Export Match JSON</div><div class="p-desc">Download complete ball-by-ball match backup file</div>';
+    jsonCard.onclick = () => {
+      exportMatchJson();
+      state.showPauseMenu = false;
+      render();
+    };
+    moreGrid.appendChild(jsonCard);
+  }
+
+  m.appendChild(moreGrid);
+
+  const actions = el('div', 'modal-actions');
+  const closeBtn = el('button', 'btn btn-ghost', 'Close Menu');
+  closeBtn.type = 'button';
+  closeBtn.onclick = () => { state.showPauseMenu = false; render(); };
+  actions.appendChild(closeBtn);
+  m.appendChild(actions);
+
+  backdrop.appendChild(m);
+  return backdrop;
+}
+
+function exportMatchJson() {
+  try {
+    const dataStr = JSON.stringify(buildSyncPayload(), null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'scoreboard-match-' + (state.matchCode || 'backup') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    showToast('Match JSON exported!');
+  } catch (e) {
+    showToast('Export failed', true);
+  }
+}
+
+/* =========================================================
+   LEGAL & HELP MODAL (In-App Privacy, Terms, Shortcuts)
+   ========================================================= */
+function renderLegalModal() {
+  const backdrop = el('div', 'modal-backdrop');
+  backdrop.onclick = e => { if (e.target === backdrop) { state.legalModal = null; render(); } };
+  const m = el('div', 'modal wide-modal');
+
+  if (state.legalModal === 'privacy') {
+    m.appendChild(el('div', 'step-label', 'DATA & SECURITY TRANSPARENCY'));
+    m.appendChild(el('h3', '', 'Privacy Policy'));
+    m.appendChild(el('div', 'helptext',
+      '<p style="margin-bottom:10px;color:#cbd5e1;"><strong>Last Updated: November 2026</strong> — Scoreboard is a community cricket scoring tool designed to work with minimal personal data. No sign-ups, emails, or personal accounts are required.</p>' +
+      '<p style="margin-bottom:8px;color:#cbd5e1;"><strong style="color:#34d399;">What is stored:</strong> Team names, player names, venue details, ball-by-ball scoring data, an anonymous Firebase session ID, and a one-way SHA-256 hash of the scorer password.</p>' +
+      '<p style="margin-bottom:8px;color:#cbd5e1;"><strong style="color:#34d399;">What is never collected:</strong> No tracking cookies, no third-party ad networks, and no contact or billing details.</p>' +
+      '<p style="color:#cbd5e1;"><strong style="color:#34d399;">Where data lives:</strong> Live match telemetry is synced via Google Firebase Realtime Database and cached in your browser\'s localStorage for offline resilience.</p>'
+    ));
+  } else if (state.legalModal === 'terms') {
+    m.appendChild(el('div', 'step-label', 'USAGE AGREEMENT'));
+    m.appendChild(el('h3', '', 'Terms and Conditions'));
+    m.appendChild(el('div', 'helptext',
+      '<p style="margin-bottom:10px;color:#cbd5e1;"><strong>Last Updated: November 2026</strong> — Scoreboard is provided free of charge on an "as-is" basis for informal, school, club, and community cricket tournaments.</p>' +
+      '<p style="margin-bottom:8px;color:#cbd5e1;"><strong style="color:#34d399;">Scorer Responsibility:</strong> The match scorer is responsible for verifying runs, extras, bowler quotas, and dismissals. Anyone with the 5-character match code can view the live scoreboard.</p>' +
+      '<p style="color:#cbd5e1;"><strong style="color:#34d399;">Acceptable Use:</strong> Do not enter unlawful or abusive content into team or player fields. Export a JSON or PNG backup after key matches.</p>'
+    ));
+  } else {
+    m.appendChild(el('div', 'step-label', 'QUICK GUIDE & SHORTCUTS'));
+    m.appendChild(el('h3', '', 'Help &amp; Keyboard Shortcuts'));
+    m.appendChild(el('div', 'helptext',
+      '<p style="margin-bottom:8px;color:#cbd5e1;"><strong style="color:#34d399;">Keyboard Shortcuts:</strong> Press <code class="num" style="color:#ffffff;">Esc</code> or <code class="num" style="color:#ffffff;">P</code> at any time to open the Pause &amp; Command Menu.</p>' +
+      '<p style="margin-bottom:8px;color:#cbd5e1;"><strong style="color:#34d399;">Viewer Match Codes:</strong> Viewers can join any active match by entering its 5-character code. If an invalid or inactive code is entered, an error alert is shown immediately.</p>' +
+      '<p style="color:#cbd5e1;"><strong style="color:#34d399;">Clickable Brand Logo:</strong> Click the top-left <strong>SCOREBOARD</strong> emblem at any time to toggle between the Live Scorer and Scoreboard views.</p>'
+    ));
+  }
+
+  const actions = el('div', 'modal-actions');
+  const closeBtn = el('button', 'btn btn-primary', 'Got it');
+  closeBtn.type = 'button';
+  closeBtn.onclick = () => { state.legalModal = null; render(); };
+  actions.appendChild(closeBtn);
+  m.appendChild(actions);
+  backdrop.appendChild(m);
+  return backdrop;
+}
+
+function renderQrModal(){
+  const backdrop = el('div','modal-backdrop');
+  backdrop.onclick = e => { if (e.target === backdrop) { state.showQrModal = false; render(); } };
+  const m = el('div','modal');
+  m.style.textAlign = 'center';
+  m.appendChild(el('h3','','Scan to watch live scoreboard'));
+  const qrBox = el('div');
+  qrBox.setAttribute('data-qr', buildJoinUrl(state.matchCode));
+  qrBox.setAttribute('data-qr-size','200');
+  qrBox.style.background = '#ffffff';
+  qrBox.style.display = 'inline-block';
+  qrBox.style.padding = '12px';
+  qrBox.style.borderRadius = '12px';
+  qrBox.style.marginBottom = '12px';
+  m.appendChild(qrBox);
+  m.appendChild(el('div','helptext','Or enter match code: <b style="color:#34d399;font-family:\'Space Mono\',monospace;font-size:16px;">'+state.matchCode+'</b>'));
+  const actions = el('div','modal-actions');
+  actions.style.justifyContent = 'center';
+
+  const copyBtn = el('button', 'btn btn-ghost', 'Copy Invite Link');
+  copyBtn.type = 'button';
+  copyBtn.onclick = () => {
+    const link = buildJoinUrl(state.matchCode);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(() => showToast('Invite link copied!')).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = link;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); showToast('Invite link copied!'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  };
+  actions.appendChild(copyBtn);
+
+  const closeBtn = el('button','btn btn-primary','Done');
+  closeBtn.type = 'button';
+  closeBtn.onclick = ()=>{ state.showQrModal = false; render(); };
+  actions.appendChild(closeBtn);
+  m.appendChild(actions);
+  backdrop.appendChild(m);
+  return backdrop;
+}
+
+/* ---------------- SCORING MODALS ---------------- */
 function renderModal(){
   const backdrop = el('div','modal-backdrop');
   const m = el('div','modal');
@@ -1549,16 +2989,18 @@ function renderModal(){
 
   if(state.modal.type==='byes'){
     m.appendChild(el('h3', state.modal.extraType==='B'?'Byes':'Leg byes'));
-    m.appendChild(el('div','helptext','How many runs were run?'));
+    m.appendChild(el('div','helptext','How many runs were completed by the batters?'));
     const row = el('div','chip-row');
     [1,2,3,4].forEach(r=>{
-      const b = el('button','chip', r);
+      const b = el('button','chip num', r);
+      b.type = 'button';
       b.onclick = ()=>confirmByes(state.modal.extraType, r);
       row.appendChild(b);
     });
     m.appendChild(row);
     const actions = el('div','modal-actions');
     const cancel = el('button','btn btn-ghost','Cancel');
+    cancel.type = 'button';
     cancel.onclick = ()=>{ state.modal=null; render(); };
     actions.appendChild(cancel);
     m.appendChild(actions);
@@ -1566,44 +3008,77 @@ function renderModal(){
 
   if(state.modal.type==='wide'){
     m.appendChild(el('h3','Wide ball'));
-    m.appendChild(el('div','helptext','1 run is automatic. Add more only if the batsmen ran, or it beat the keeper to the boundary.'));
+    m.appendChild(el('div','helptext','1 penalty run is automatic. Add extra runs if the batters ran or the ball reached the boundary.'));
     const row = el('div','chip-row');
-    [0,1,2,4].forEach(r=>{
-      const b = el('button','chip', r===0 ? 'Just 1' : '+'+r);
+    [0,1,2,3,4].forEach(r=>{
+      const b = el('button','chip num', r===0 ? 'Just 1 Wd' : 'Wd + '+r);
+      b.type = 'button';
       b.onclick = ()=>confirmWide(r);
       row.appendChild(b);
     });
     m.appendChild(row);
     const actions = el('div','modal-actions');
     const cancel = el('button','btn btn-ghost','Cancel');
+    cancel.type = 'button';
     cancel.onclick = ()=>{ state.modal=null; render(); };
     actions.appendChild(cancel);
     m.appendChild(actions);
   }
 
   if(state.modal.type==='noball'){
-    m.appendChild(el('h3','No ball'));
-    m.appendChild(el('div','helptext','1 penalty run is automatic. Did the batsman also hit this delivery? (Next ball will be the free hit.)'));
+    m.appendChild(el('h3','No ball (Free Hit next)'));
+    m.appendChild(el('div','helptext','1 penalty run is automatic. Select runs scored off the bat on this No Ball:'));
     const row = el('div','chip-row');
     [0,1,2,3,4,6].forEach(r=>{
-      const b = el('button','chip', r===0 ? 'No run' : r);
+      const b = el('button','chip num', r===0 ? 'Nb only (1)' : 'Nb + '+r);
+      b.type = 'button';
       b.onclick = ()=>confirmNoBall(r);
       row.appendChild(b);
     });
     m.appendChild(row);
     const actions = el('div','modal-actions');
     const cancel = el('button','btn btn-ghost','Cancel');
+    cancel.type = 'button';
     cancel.onclick = ()=>{ state.modal=null; render(); };
     actions.appendChild(cancel);
     m.appendChild(actions);
   }
 
+  if(state.modal.type==='retire'){
+    m.appendChild(el('h3','Retire Batter / Tactical Substitution'));
+    m.appendChild(el('div','helptext','Select which batter at the crease is retiring hurt or being substituted:'));
+    const whoSel = el('select');
+    [state.strikerId, state.nonStrikerId].filter(Boolean).forEach(pid => {
+      const opt = el('option', '', displayPlayerName(pid));
+      opt.value = pid;
+      whoSel.appendChild(opt);
+    });
+    m.appendChild(whoSel);
+    const actions = el('div','modal-actions');
+    const cancel = el('button','btn btn-ghost','Cancel');
+    cancel.type = 'button';
+    cancel.onclick = ()=>{ state.modal=null; render(); };
+    const confirm = el('button','btn btn-primary','Retire & Pick Replacement');
+    confirm.type = 'button';
+    confirm.onclick = ()=>{
+      const retiringId = whoSel.value;
+      if (retiringId === state.strikerId) state.strikerId = null;
+      else if (retiringId === state.nonStrikerId) state.nonStrikerId = null;
+      state.modal = { type: 'newBatsman', outId: retiringId };
+      showToast(displayPlayerName(retiringId) + ' retired');
+      render();
+    };
+    actions.appendChild(cancel);
+    actions.appendChild(confirm);
+    m.appendChild(actions);
+  }
+
   if(state.modal.type==='wicket'){
-    m.appendChild(el('h3','Wicket — dismissal type'));
+    m.appendChild(el('h3','Log Wicket — Dismissal Details'));
     const bowlingTeam = getTeam(inn.bowlingTeam);
     const fielders = bowlingTeam.players.concat(bowlingTeam.substitutes || []);
     const typeSel = el('select');
-    ['Bowled','Caught','LBW','Run Out','Stumped','Hit Wicket','Obstructing Field','Retired Hurt'].forEach(t=>{
+    ['Bowled','Caught','LBW','Run Out','Stumped','Hit Wicket','Obstructing Field'].forEach(t=>{
       const opt = el('option','',t); opt.value=t; typeSel.appendChild(opt);
     });
     const f1 = el('div','field'); f1.appendChild(el('label','','Dismissal type')); f1.appendChild(typeSel);
@@ -1612,8 +3087,8 @@ function renderModal(){
     const fielderWrap = el('div','field');
     fielderWrap.appendChild(el('label','','Fielder (catch / run out / stumping)'));
     const fielderSel = el('select');
-    const noneOpt = el('option','','—'); noneOpt.value=''; fielderSel.appendChild(noneOpt);
-    fielders.forEach(p=>{ const opt=el('option','',p.name||p.id); opt.value=p.id; fielderSel.appendChild(opt); });
+    const noneOpt = el('option','','— None / Unassisted —'); noneOpt.value=''; fielderSel.appendChild(noneOpt);
+    fielders.forEach(p=>{ const opt=el('option','',displayPlayerName(p.id)); opt.value=p.id; fielderSel.appendChild(opt); });
     fielderWrap.appendChild(fielderSel);
     m.appendChild(fielderWrap);
 
@@ -1623,13 +3098,12 @@ function renderModal(){
     whoSel.style.marginBottom = '12px';
     [state.strikerId, state.nonStrikerId].forEach(pid=>{
       if(!pid) return;
-      const p = findPlayer(pid);
-      const opt = el('option','', p?.name||pid); opt.value=pid; whoSel.appendChild(opt);
+      const opt = el('option','', displayPlayerName(pid)); opt.value=pid; whoSel.appendChild(opt);
     });
     const runsInput = el('input'); runsInput.type='number'; runsInput.value=0; runsInput.min=0; runsInput.max=3;
     runOutWrap.appendChild(el('label','','Who was run out?'));
     runOutWrap.appendChild(whoSel);
-    runOutWrap.appendChild(el('label','','Runs completed before run out'));
+    runOutWrap.appendChild(el('label','','Completed runs before run out'));
     runOutWrap.appendChild(runsInput);
     m.appendChild(runOutWrap);
 
@@ -1637,8 +3111,10 @@ function renderModal(){
 
     const actions = el('div','modal-actions');
     const cancel = el('button','btn btn-ghost','Cancel');
+    cancel.type = 'button';
     cancel.onclick = ()=>{ state.modal=null; render(); };
-    const confirm = el('button','btn btn-primary','Confirm');
+    const confirm = el('button','btn btn-primary','Confirm Wicket');
+    confirm.type = 'button';
     confirm.onclick = ()=>{
       const runOutInfo = { who: whoSel.value, runsCompleted: parseInt(runsInput.value)||0 };
       confirmWicket(typeSel.value, fielderSel.value, runOutInfo);
@@ -1648,22 +3124,24 @@ function renderModal(){
   }
 
   if(state.modal.type==='newBatsman'){
-    m.appendChild(el('h3','Next batsman'));
+    const needRole = state.strikerId === null ? 'Striker' : 'Non-Striker';
+    m.appendChild(el('h3', state.modal.openers ? ('Select Innings ' + (state.currentInnings + 1) + ' ' + needRole) : ('Select Next Batter (' + needRole + ')')));
     const battingTeam = getTeam(inn.battingTeam);
     const roster = battingTeam.players.concat(battingTeam.substitutes || []);
     const available = roster.filter(p=> !inn.dismissedOrder.includes(p.id) && p.id!==state.strikerId && p.id!==state.nonStrikerId);
     const sel = el('select');
-    available.forEach(p=>{ const opt=el('option','',p.name||p.id); opt.value=p.id; sel.appendChild(opt); });
+    available.forEach(p=>{ const opt=el('option','',displayPlayerName(p.id)); opt.value=p.id; sel.appendChild(opt); });
     m.appendChild(sel);
     const actions = el('div','modal-actions');
-    const confirm = el('button','btn btn-primary','Confirm');
+    const confirm = el('button','btn btn-primary','Send to Crease');
+    confirm.type = 'button';
     confirm.onclick = ()=>confirmNewBatsman(sel.value);
     actions.appendChild(confirm);
     m.appendChild(actions);
   }
 
   if(state.modal.type==='newBowler'){
-    m.appendChild(el('h3','Next over — select bowler'));
+    m.appendChild(el('h3','Select Bowler for Over ' + (Math.floor(legalBallCount(inn)/6) + 1)));
     const bowlingTeam = getTeam(inn.bowlingTeam);
     const maxOv = getMaxOversPerBowler();
     const eligible = bowlingTeam.players.filter(p=>{
@@ -1673,17 +3151,24 @@ function renderModal(){
     });
     const list = eligible.length ? eligible : bowlingTeam.players.filter(p=>p.id!==state.previousBowlerId);
     if(!eligible.length){
-      m.appendChild(el('div','helptext','Every other bowler has reached the '+maxOv+'-over limit for '+state.format+' — showing remaining options anyway.'));
+      m.appendChild(el('div','helptext','All other bowlers have reached the '+maxOv+'-over quota for '+state.format+' — showing remaining bowlers.'));
     }
     const sel = el('select');
     list.forEach(p=>{
       const bs = bowlingStatsFor(inn, p.id);
-      const label = (p.name||p.id) + (isFinite(maxOv) ? ' — '+bs.overs+'/'+maxOv+' ov bowled' : '');
+      const label = displayPlayerName(p.id) + (isFinite(maxOv) ? ' — '+bs.overs+'/'+maxOv+' ov ('+bs.wkts+'W, '+bs.runs+'R)' : '');
       const opt=el('option','',label); opt.value=p.id; sel.appendChild(opt);
     });
     m.appendChild(sel);
     const actions = el('div','modal-actions');
-    const confirm = el('button','btn btn-primary','Confirm');
+    if (state.bowlerId) {
+      const cancel = el('button', 'btn btn-ghost', 'Cancel');
+      cancel.type = 'button';
+      cancel.onclick = () => { state.modal = null; render(); };
+      actions.appendChild(cancel);
+    }
+    const confirm = el('button','btn btn-primary','Confirm Bowler');
+    confirm.type = 'button';
     confirm.onclick = ()=>confirmNewBowler(sel.value);
     actions.appendChild(confirm);
     m.appendChild(actions);
@@ -1693,53 +3178,280 @@ function renderModal(){
   return backdrop;
 }
 
-/* ---------------- VIEWER SCORECARD ---------------- */
-function cumulativeRunsByOver(inn){
-  const points = [{x:0, y:0}];
+/* =========================================================
+   ENHANCED SCORE GRAPH & ANALYTICS SUITE
+   ========================================================= */
+function computeOverSummaries(inn) {
+  const maxOverSeen = inn.deliveries.reduce((m, d) => Math.max(m, d.overNum || 1), 0);
+  const summaries = [];
+  let cumRuns = 0;
+  let cumWkts = 0;
+  for (let o = 1; o <= maxOverSeen; o++) {
+    const delivs = inn.deliveries.filter(d => d.overNum === o);
+    const runsInOver = delivs.reduce((s, d) => s + d.runsOffBat + d.extraRuns, 0);
+    const wktsInOver = delivs.filter(d => d.wicket).length;
+    const wicketsList = delivs.filter(d => d.wicket).map(d => displayPlayerName(d.wicket.dismissedId));
+    const bowlerId = delivs.length ? delivs[0].bowlerId : null;
+    cumRuns += runsInOver;
+    cumWkts += wktsInOver;
+    const crr = (cumRuns / o).toFixed(2);
+    summaries.push({
+      over: o,
+      runs: runsInOver,
+      wkts: wktsInOver,
+      wicketsList,
+      cumRuns,
+      cumWkts,
+      crr: parseFloat(crr),
+      bowlerName: bowlerId ? displayPlayerName(bowlerId) : '—',
+      balls: delivs.map(d => {
+        if (d.wicket) return 'W';
+        if (d.extraType) return d.extraType + (d.extraRuns > 1 ? d.extraRuns : '');
+        return d.runsOffBat.toString();
+      })
+    });
+  }
+  return summaries;
+}
+
+function cumulativeRunsByBall(inn) {
+  const points = [{ x: 0, y: 0, wicket: null, overNum: 0 }];
   let cum = 0, legal = 0;
-  inn.deliveries.forEach(d=>{
+  (inn.deliveries || []).forEach(d => {
     cum += d.runsOffBat + d.extraRuns;
-    if(d.legal) legal++;
-    points.push({x: legal/6, y: cum});
+    if (d.legal) legal++;
+    points.push({
+      x: legal / 6,
+      y: cum,
+      overNum: d.overNum,
+      wicket: d.wicket ? {
+        player: displayPlayerName(d.wicket.dismissedId),
+        score: cum,
+        over: Math.floor(legal / 6) + '.' + (legal % 6)
+      } : null
+    });
   });
   return points;
 }
 
-function buildWormChart(){
-  const dataSets = state.innings.map((inn,idx)=>({
-    label: getTeam(inn.battingTeam).name || ('Team '+(idx+1)),
-    points: cumulativeRunsByOver(inn),
-    color: idx===0 ? '#10b981' : '#38bdf8'
-  })).filter(ds=>ds.points.length>1);
-  if(!dataSets.length) return null;
+function buildInteractiveScoreGraph() {
+  const activeInnings = state.innings.filter(inn => inn.deliveries && inn.deliveries.length > 0);
+  if (!activeInnings.length) return null;
 
-  const maxX = Math.max(state.maxOvers, ...dataSets.map(ds=>ds.points[ds.points.length-1].x));
-  const maxY = Math.max(10, ...dataSets.map(ds=>Math.max(...ds.points.map(p=>p.y)))) * 1.1;
-  const width=600, height=240, padL=38, padR=14, padT=14, padB=28;
-  const plotW = width-padL-padR, plotH = height-padT-padB;
-  const xScale = x => padL + (x/maxX)*plotW;
-  const yScale = y => padT + plotH - (y/maxY)*plotH;
+  const series = state.innings.map((inn, idx) => ({
+    idx,
+    label: getTeam(inn.battingTeam).name || ('Innings ' + (idx + 1)),
+    color: idx === 0 ? '#10b981' : '#38bdf8',
+    fillId: idx === 0 ? 'gradEmerald' : 'gradSky',
+    points: cumulativeRunsByBall(inn),
+    overs: computeOverSummaries(inn),
+    target: inn.target
+  })).filter(s => s.points.length > 1);
 
-  let svg = '<svg viewBox="0 0 '+width+' '+height+'" style="width:100%;height:auto;">';
-  svg += '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+plotH)+'" stroke="#334155" stroke-width="1"/>';
-  svg += '<line x1="'+padL+'" y1="'+(padT+plotH)+'" x2="'+(padL+plotW)+'" y2="'+(padT+plotH)+'" stroke="#334155" stroke-width="1"/>';
-  const xStep = maxX>40 ? 10 : maxX>15 ? 5 : 2;
-  for(let o=0; o<=maxX; o+=xStep){
-    const x = xScale(o);
-    svg += '<line x1="'+x+'" y1="'+(padT+plotH)+'" x2="'+x+'" y2="'+(padT+plotH+4)+'" stroke="#334155"/>';
-    svg += '<text x="'+x+'" y="'+(padT+plotH+16)+'" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="Space Mono, monospace">'+o+'</text>';
+  if (!series.length) return null;
+
+  const maxOversGraph = Math.max(
+    Math.min(state.maxOvers, 20),
+    ...series.map(s => Math.ceil(s.points[s.points.length - 1].x)),
+    6
+  );
+
+  const width = 680, height = 270, padL = 44, padR = 20, padT = 20, padB = 34;
+  const plotW = width - padL - padR;
+  const plotH = height - padT - padB;
+
+  let svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" style="width:100%;height:auto;display:block;overflow:visible;">';
+  svg += '<defs>' +
+    '<linearGradient id="gradEmerald" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="#10b981" stop-opacity="0.28"/>' +
+      '<stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>' +
+    '</linearGradient>' +
+    '<linearGradient id="gradSky" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="#38bdf8" stop-opacity="0.28"/>' +
+      '<stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0"/>' +
+    '</linearGradient>' +
+  '</defs>';
+
+  if (state.chartMode === 'worm') {
+    const rawMaxY = Math.max(
+      20,
+      ...series.map(s => Math.max(...s.points.map(p => p.y))),
+      ...(series.map(s => s.target || 0))
+    );
+    const maxY = Math.ceil((rawMaxY * 1.12) / 10) * 10;
+    const xScale = x => padL + (x / maxOversGraph) * plotW;
+    const yScale = y => padT + plotH - (y / maxY) * plotH;
+
+    /* Gridlines */
+    const yTicks = 4;
+    for (let i = 0; i <= yTicks; i++) {
+      const val = Math.round((maxY / yTicks) * i);
+      const y = yScale(val);
+      svg += '<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + plotW) + '" y2="' + y.toFixed(1) + '" stroke="#1e293b" stroke-width="1" stroke-dasharray="' + (i === 0 ? '' : '3 3') + '"/>';
+      svg += '<text x="' + (padL - 8) + '" y="' + (y + 3.5).toFixed(1) + '" font-size="10" fill="#94a3b8" text-anchor="end" font-family="Space Mono, monospace">' + val + '</text>';
+    }
+
+    const xStep = maxOversGraph > 30 ? 5 : maxOversGraph > 12 ? 2 : 1;
+    for (let o = 0; o <= maxOversGraph; o += xStep) {
+      const x = xScale(o);
+      svg += '<line x1="' + x.toFixed(1) + '" y1="' + padT + '" x2="' + x.toFixed(1) + '" y2="' + (padT + plotH) + '" stroke="#1e293b" stroke-width="0.6"/>';
+      svg += '<text x="' + x.toFixed(1) + '" y="' + (padT + plotH + 18) + '" font-size="10" fill="#94a3b8" text-anchor="middle" font-family="Space Mono, monospace">Ov ' + o + '</text>';
+    }
+
+    /* Target Line if chasing */
+    const chaseTarget = series.find(s => s.target)?.target;
+    if (chaseTarget && chaseTarget <= maxY) {
+      const ty = yScale(chaseTarget);
+      svg += '<line x1="' + padL + '" y1="' + ty.toFixed(1) + '" x2="' + (padL + plotW) + '" y2="' + ty.toFixed(1) + '" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 4"/>';
+      svg += '<text x="' + (padL + plotW - 4) + '" y="' + (ty - 5).toFixed(1) + '" font-size="9.5" fill="#fbbf24" text-anchor="end" font-family="Space Mono, monospace" font-weight="700">TARGET ' + chaseTarget + '</text>';
+    }
+
+    /* Selected Over Vertical Highlight */
+    if (state.selectedOverInspect) {
+      const hx = xScale(state.selectedOverInspect);
+      svg += '<line x1="' + hx.toFixed(1) + '" y1="' + padT + '" x2="' + hx.toFixed(1) + '" y2="' + (padT + plotH) + '" stroke="#34d399" stroke-width="1.5" stroke-dasharray="2 2"/>';
+    }
+
+    /* Area & Line Paths + Wicket Markers */
+    series.forEach(s => {
+      const coords = s.points.map(p => [xScale(p.x), yScale(p.y)]);
+      const lineD = coords.map((c, i) => (i === 0 ? 'M' : 'L') + c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ');
+      const lastX = coords[coords.length - 1][0];
+      const areaD = lineD + ' L' + lastX.toFixed(1) + ',' + (padT + plotH) + ' L' + padL + ',' + (padT + plotH) + ' Z';
+      svg += '<path d="' + areaD + '" fill="url(#' + s.fillId + ')"/>';
+      svg += '<path d="' + lineD + '" fill="none" stroke="' + s.color + '" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>';
+
+      /* End point pulse */
+      const endPt = coords[coords.length - 1];
+      svg += '<circle cx="' + endPt[0].toFixed(1) + '" cy="' + endPt[1].toFixed(1) + '" r="4" fill="' + s.color + '" stroke="#060b14" stroke-width="1.5"/>';
+
+      /* Wicket markers on curve */
+      s.points.forEach(p => {
+        if (p.wicket) {
+          const wx = xScale(p.x), wy = yScale(p.y);
+          svg += '<g>' +
+            '<circle cx="' + wx.toFixed(1) + '" cy="' + wy.toFixed(1) + '" r="6.5" fill="#e11d48" stroke="#ffffff" stroke-width="1.4"/>' +
+            '<text x="' + wx.toFixed(1) + '" y="' + (wy + 3).toFixed(1) + '" font-size="7.5" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="Inter, sans-serif">W</text>' +
+          '</g>';
+        }
+      });
+    });
+  } else if (state.chartMode === 'manhattan') {
+    const maxOverBar = Math.max(6, ...series.map(s => s.overs.length));
+    const maxRunsInOver = Math.max(12, ...series.flatMap(s => s.overs.map(o => o.runs)));
+    const maxY = Math.ceil((maxRunsInOver * 1.2) / 4) * 4;
+    const yScale = y => padT + plotH - (y / maxY) * plotH;
+
+    for (let i = 0; i <= 4; i++) {
+      const val = Math.round((maxY / 4) * i);
+      const y = yScale(val);
+      svg += '<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + plotW) + '" y2="' + y.toFixed(1) + '" stroke="#1e293b" stroke-width="1" stroke-dasharray="' + (i === 0 ? '' : '3 3') + '"/>';
+      svg += '<text x="' + (padL - 8) + '" y="' + (y + 3.5).toFixed(1) + '" font-size="10" fill="#94a3b8" text-anchor="end" font-family="Space Mono, monospace">' + val + '</text>';
+    }
+
+    const slotW = plotW / maxOverBar;
+    const barW = Math.min(14, Math.max(4, (slotW - 6) / series.length));
+
+    for (let o = 1; o <= maxOverBar; o++) {
+      const groupCenterX = padL + (o - 0.5) * slotW;
+      if (state.selectedOverInspect === o) {
+        svg += '<rect x="' + (padL + (o - 1) * slotW).toFixed(1) + '" y="' + padT + '" width="' + slotW.toFixed(1) + '" height="' + plotH + '" fill="rgba(16,185,129,0.08)"/>';
+      }
+      series.forEach((s, sIdx) => {
+        const ovObj = s.overs.find(item => item.over === o);
+        if (!ovObj) return;
+        const bx = groupCenterX - (series.length * barW) / 2 + sIdx * barW;
+        const by = yScale(ovObj.runs);
+        const bh = Math.max(2, padT + plotH - by);
+        svg += '<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + (barW - 1.5).toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="2.5" fill="' + s.color + '"/>';
+        if (ovObj.wkts > 0) {
+          const cx = bx + (barW - 1.5) / 2;
+          const cy = Math.max(padT + 7, by - 8);
+          svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="5.5" fill="#e11d48" stroke="#060b14" stroke-width="1"/>';
+          svg += '<text x="' + cx.toFixed(1) + '" y="' + (cy + 2.5).toFixed(1) + '" font-size="7" font-weight="700" fill="#ffffff" text-anchor="middle">W</text>';
+        }
+      });
+      if (maxOverBar <= 20 || o % 2 === 1 || o === maxOverBar) {
+        svg += '<text x="' + groupCenterX.toFixed(1) + '" y="' + (padT + plotH + 18) + '" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="Space Mono, monospace">' + o + '</text>';
+      }
+    }
+  } else {
+    /* Run Rate Wave (CRR Progression by Over) */
+    const maxOverRR = Math.max(6, ...series.map(s => s.overs.length));
+    const maxRR = Math.max(12, ...series.flatMap(s => s.overs.map(o => o.crr)));
+    const maxY = Math.ceil(maxRR * 1.15);
+    const xScale = o => padL + ((o - 0.5) / maxOverRR) * plotW;
+    const yScale = y => padT + plotH - (Math.min(maxY, y) / maxY) * plotH;
+
+    for (let i = 0; i <= 4; i++) {
+      const val = ((maxY / 4) * i).toFixed(1);
+      const y = yScale(parseFloat(val));
+      svg += '<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + plotW) + '" y2="' + y.toFixed(1) + '" stroke="#1e293b" stroke-width="1" stroke-dasharray="' + (i === 0 ? '' : '3 3') + '"/>';
+      svg += '<text x="' + (padL - 8) + '" y="' + (y + 3.5).toFixed(1) + '" font-size="9.5" fill="#94a3b8" text-anchor="end" font-family="Space Mono, monospace">' + val + '</text>';
+    }
+
+    series.forEach(s => {
+      if (!s.overs.length) return;
+      const pts = s.overs.map(o => [xScale(o.over), yScale(o.crr)]);
+      const dPath = pts.map((c, i) => (i === 0 ? 'M' : 'L') + c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ');
+      svg += '<path d="' + dPath + '" fill="none" stroke="' + s.color + '" stroke-width="2.6" stroke-linecap="round"/>';
+      pts.forEach(c => {
+        svg += '<circle cx="' + c[0].toFixed(1) + '" cy="' + c[1].toFixed(1) + '" r="3.5" fill="' + s.color + '" stroke="#060b14" stroke-width="1.2"/>';
+      });
+    });
+
+    for (let o = 1; o <= maxOverRR; o++) {
+      if (maxOverRR <= 20 || o % 2 === 1) {
+        svg += '<text x="' + xScale(o).toFixed(1) + '" y="' + (padT + plotH + 18) + '" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="Space Mono, monospace">Ov ' + o + '</text>';
+      }
+    }
   }
-  const yStep = Math.max(10, Math.ceil(maxY/4/10)*10);
-  for(let r=0; r<=maxY; r+=yStep){
-    const y = yScale(r);
-    svg += '<text x="'+(padL-6)+'" y="'+(y+3)+'" font-size="9" fill="#94a3b8" text-anchor="end" font-family="Space Mono, monospace">'+r+'</text>';
-  }
-  dataSets.forEach(ds=>{
-    const pathD = ds.points.map((p,i)=> (i===0?'M':'L')+xScale(p.x).toFixed(1)+','+yScale(p.y).toFixed(1)).join(' ');
-    svg += '<path d="'+pathD+'" fill="none" stroke="'+ds.color+'" stroke-width="2.5" stroke-linecap="round"/>';
-  });
+
   svg += '</svg>';
-  return { svg, dataSets };
+  return { svg, series };
+}
+
+function computePartnerships(inn) {
+  const list = [];
+  let curRuns = 0, curBalls = 0;
+  let b1 = null, b2 = null;
+  (inn.deliveries || []).forEach(d => {
+    if (!b1) b1 = d.strikerId;
+    if (!b2) b2 = d.nonStrikerId;
+    curRuns += d.runsOffBat + d.extraRuns;
+    if (d.legal) curBalls++;
+    if (d.wicket) {
+      list.push({
+        batters: displayPlayerName(b1) + ' & ' + displayPlayerName(b2),
+        runs: curRuns,
+        balls: curBalls,
+        unbroken: false
+      });
+      curRuns = 0; curBalls = 0; b1 = null; b2 = null;
+    }
+  });
+  if (curBalls > 0 || curRuns > 0) {
+    list.push({
+      batters: displayPlayerName(b1 || state.strikerId) + ' & ' + displayPlayerName(b2 || state.nonStrikerId),
+      runs: curRuns,
+      balls: curBalls,
+      unbroken: true
+    });
+  }
+  return list;
+}
+
+function computePhases(inn) {
+  const p1 = { name: 'Powerplay (Ov 1–6)', runs: 0, wkts: 0, balls: 0 };
+  const p2 = { name: 'Middle Overs (Ov 7–15)', runs: 0, wkts: 0, balls: 0 };
+  const p3 = { name: 'Death Overs (Ov 16+)', runs: 0, wkts: 0, balls: 0 };
+  (inn.deliveries || []).forEach(d => {
+    const target = d.overNum <= 6 ? p1 : d.overNum <= 15 ? p2 : p3;
+    target.runs += d.runsOffBat + d.extraRuns;
+    if (d.wicket) target.wkts++;
+    if (d.legal) target.balls++;
+  });
+  return [p1, p2, p3];
 }
 
 function matchBattingLeaders(){
@@ -1749,7 +3461,7 @@ function matchBattingLeaders(){
     const facedIds = [...new Set(inn.deliveries.map(d=>d.strikerId))];
     team.players.concat(team.substitutes||[]).filter(p=>facedIds.includes(p.id)).forEach(p=>{
       const st = battingStatsFor(inn,p.id);
-      all.push({ name: p.name||p.id, runs: st.runs, balls: st.balls });
+      all.push({ name: displayPlayerName(p.id), runs: st.runs, balls: st.balls });
     });
   });
   return all.sort((a,b)=>b.runs-a.runs).slice(0,3);
@@ -1761,7 +3473,7 @@ function matchBowlingLeaders(){
     const bowledIds = [...new Set(inn.deliveries.map(d=>d.bowlerId))];
     team.players.concat(team.substitutes||[]).filter(p=>bowledIds.includes(p.id)).forEach(p=>{
       const bs = bowlingStatsFor(inn,p.id);
-      all.push({ name: p.name||p.id, wkts: bs.wkts, runs: bs.runs, overs: bs.overs });
+      all.push({ name: displayPlayerName(p.id), wkts: bs.wkts, runs: bs.runs, overs: bs.overs });
     });
   });
   return all.sort((a,b)=> b.wkts-a.wkts || a.runs-b.runs).slice(0,3);
@@ -1780,13 +3492,14 @@ async function generateScorecardImage(){
   ctx.fillRect(0,0,W,12);
 
   const inn1 = state.innings[0], inn2 = state.innings[1];
-  const team1 = getTeam(inn1.battingTeam), team2 = getTeam(inn2.battingTeam);
+  const team1 = inn1 ? getTeam(inn1.battingTeam) : state.teamA;
+  const team2 = inn2 ? getTeam(inn2.battingTeam) : state.teamB;
 
   let y = 90;
   ctx.fillStyle = '#94a3b8';
   ctx.font = '600 28px Inter, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('FINAL SCORECARD', W/2, y);
+  ctx.fillText('MATCH SCORECARD · ' + (state.venue || 'SCOREBOARD LIVE'), W/2, y);
 
   y += 70;
   ctx.fillStyle = '#f8fafc';
@@ -1795,6 +3508,7 @@ async function generateScorecardImage(){
 
   y += 90;
   [[team1,inn1],[team2,inn2]].forEach(([team,inn])=>{
+    if (!inn) return;
     ctx.font = '600 32px Inter, sans-serif';
     ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'left';
@@ -1806,16 +3520,22 @@ async function generateScorecardImage(){
     y += 60;
   });
 
-  y += 20;
-  const t1 = teamTotal(inn1), t2 = teamTotal(inn2);
-  let resultText;
-  if(t2>t1) resultText = (team2.name||'Team 2')+' won by '+(10-teamWickets(inn2))+' wickets';
-  else if(t1>t2) resultText = (team1.name||'Team 1')+' won by '+(t1-t2)+' runs';
-  else resultText = 'Match tied';
-  ctx.textAlign = 'center';
-  ctx.font = '700 30px Inter, sans-serif';
-  ctx.fillStyle = '#fbbf24';
-  ctx.fillText(resultText, W/2, y);
+  if (inn1 && inn2) {
+    y += 20;
+    const t1 = teamTotal(inn1), t2 = teamTotal(inn2);
+    let resultText;
+    if (state.matchComplete) {
+      if(t2>t1) resultText = (team2.name||'Team 2')+' won by '+(10-teamWickets(inn2))+' wickets';
+      else if(t1>t2) resultText = (team1.name||'Team 1')+' won by '+(t1-t2)+' runs';
+      else resultText = 'Match tied';
+    } else {
+      resultText = (team2.name||'Team 2') + ' need ' + Math.max(0, (t1 + 1) - t2) + ' runs to win';
+    }
+    ctx.textAlign = 'center';
+    ctx.font = '700 30px Inter, sans-serif';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText(resultText, W/2, y);
+  }
 
   y += 70;
   ctx.strokeStyle = '#1e293b';
@@ -1861,12 +3581,13 @@ async function generateScorecardImage(){
   ctx.textAlign = 'center';
   ctx.font = '500 22px Inter, sans-serif';
   ctx.fillStyle = '#64748b';
-  ctx.fillText('Scored live with Scoreboard', W/2, H-50);
+  ctx.fillText('Scored live with Scoreboard · Match ' + (state.matchCode || ''), W/2, H-50);
 
   return new Promise(resolve=>{ canvas.toBlob(blob=>resolve(blob), 'image/png'); });
 }
 
 async function shareScorecardImage(){
+  showToast('Generating HD Scorecard Poster…');
   const blob = await generateScorecardImage();
   if(!blob) return;
   const file = new File([blob], 'scorecard.png', { type:'image/png' });
@@ -1876,50 +3597,206 @@ async function shareScorecardImage(){
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'scorecard.png';
+  a.href = url; a.download = 'scorecard-' + (state.matchCode || 'match') + '.png';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  showToast('Scorecard PNG downloaded!');
 }
 
 function renderViewer(){
   const frag = el('div');
+
+  /* 1. Enhanced Interactive Score Graph Card FIRST on Scoreboard for immediate broadcast impact */
+  const graphData = buildInteractiveScoreGraph();
+  if (graphData) {
+    const wormPaper = el('div', 'paper');
+    const cHeader = el('div', 'chart-header');
+    const titleWrap = el('div');
+    titleWrap.innerHTML =
+      '<div class="innings-tag" style="margin-bottom:4px;">LIVE TELEMETRY</div>' +
+      '<div style="font-size:18px;font-weight:800;color:#ffffff;">Score &amp; Run Rate Progression Graph</div>';
+    cHeader.appendChild(titleWrap);
+
+    const tabs = el('div', 'chart-tabs');
+    [
+      ['worm', 'Worm (Cumulative)'],
+      ['manhattan', 'Manhattan (Per Over)'],
+      ['runrate', 'Run Rate Wave']
+    ].forEach(([modeKey, modeLabel]) => {
+      const tb = el('button', 'chart-tab' + (state.chartMode === modeKey ? ' active' : ''), modeLabel);
+      tb.type = 'button';
+      tb.onclick = () => { state.chartMode = modeKey; render(); };
+      tabs.appendChild(tb);
+    });
+    cHeader.appendChild(tabs);
+    wormPaper.appendChild(cHeader);
+
+    /* Legend + Wicket Badge Key */
+    const legend = el('div', '');
+    legend.style.display = 'flex';
+    legend.style.flexWrap = 'wrap';
+    legend.style.alignItems = 'center';
+    legend.style.justifyContent = 'space-between';
+    legend.style.gap = '10px';
+    legend.style.marginBottom = '10px';
+
+    const leftLeg = el('div', '');
+    leftLeg.innerHTML = graphData.series.map(ds =>
+      '<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:12px;color:#e2e8f0;font-weight:700;">' +
+      '<span style="width:12px;height:12px;border-radius:3px;background:' + ds.color + ';display:inline-block;"></span>' +
+      ds.label + ' (' + ds.points[ds.points.length - 1].y + ')' +
+      '</span>'
+    ).join('') +
+    '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#fda4af;font-weight:600;">' +
+      '<span style="width:14px;height:14px;border-radius:50%;background:#e11d48;color:#fff;font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;">W</span> Wicket' +
+    '</span>';
+    legend.appendChild(leftLeg);
+    wormPaper.appendChild(legend);
+
+    const svgWrap = el('div');
+    svgWrap.innerHTML = graphData.svg;
+    wormPaper.appendChild(svgWrap);
+
+    /* Interactive Over Scrubber & Telemetry Inspector */
+    const maxOverAvailable = Math.max(...graphData.series.map(s => s.overs.length), 0);
+    if (maxOverAvailable > 0) {
+      const activeOver = state.selectedOverInspect || maxOverAvailable;
+      const scrubberLabel = el('div', 'ctrl-label', 'TAP ANY OVER TO INSPECT TELEMETRY (OVER ' + activeOver + ')');
+      scrubberLabel.style.marginTop = '14px';
+      scrubberLabel.style.marginBottom = '6px';
+      wormPaper.appendChild(scrubberLabel);
+
+      const scrubber = el('div', 'over-scrubber');
+      for (let o = 1; o <= maxOverAvailable; o++) {
+        const hasWicket = graphData.series.some(s => {
+          const found = s.overs.find(item => item.over === o);
+          return found && found.wkts > 0;
+        });
+        const chipBtn = el('button', 'over-chip' + (activeOver === o ? ' active' : '') + (hasWicket ? ' has-w' : ''), 'Ov ' + o + (hasWicket ? ' •W' : ''));
+        chipBtn.type = 'button';
+        chipBtn.onclick = () => {
+          state.selectedOverInspect = o;
+          render();
+        };
+        scrubber.appendChild(chipBtn);
+      }
+      wormPaper.appendChild(scrubber);
+
+      const inspector = el('div', 'chart-inspector');
+      const inspectHtml = graphData.series.map(s => {
+        const ov = s.overs.find(item => item.over === activeOver);
+        if (!ov) return '<div style="font-size:12px;color:#64748b;">' + s.label + ': Over ' + activeOver + ' not bowled yet</div>';
+        return '<div style="flex:1 1 240px;">' +
+          '<div style="font-size:12px;font-weight:700;color:' + s.color + ';">' + s.label + ' — Over ' + activeOver + ' (' + ov.bowlerName + ')</div>' +
+          '<div class="num" style="font-size:13px;color:#f8fafc;margin-top:3px;">' +
+            '<strong>+' + ov.runs + ' runs</strong>' + (ov.wkts ? ' · <span style="color:#fda4af;font-weight:700;">' + ov.wkts + 'W (' + ov.wicketsList.join(', ') + ')</span>' : '') +
+            ' · Total: ' + ov.cumRuns + '/' + ov.cumWkts + ' (CRR ' + ov.crr.toFixed(2) + ')' +
+          '</div>' +
+          '<div class="num" style="font-size:11px;color:#94a3b8;margin-top:2px;">Balls: [' + ov.balls.join(' · ') + ']</div>' +
+        '</div>';
+      }).join('');
+      inspector.innerHTML = inspectHtml;
+      wormPaper.appendChild(inspector);
+    }
+
+    frag.appendChild(wormPaper);
+  }
+
+  /* 2. Full Batting, Bowling, Phase Split & Partnerships per Innings */
   state.innings.forEach((inn, idx)=>{
     const battingTeam = getTeam(inn.battingTeam);
     const bowlingTeam = getTeam(inn.bowlingTeam);
     const paper = el('div','paper');
-    paper.appendChild(el('div','innings-tag','INNINGS '+(idx+1)));
-    paper.appendChild(el('h3', battingTeam.name+' — '+teamTotal(inn)+'/'+teamWickets(inn)+' ('+oversStr(inn)+' ov)'));
+    paper.appendChild(el('div','innings-tag','INNINGS '+(idx+1) + (inn.target ? ' · TARGET ' + inn.target : '')));
 
+    const totalExtras = inn.deliveries.reduce((s, d) => s + d.extraRuns, 0);
+    paper.appendChild(el('h3',
+      '<span>' + battingTeam.name + '</span>' +
+      '<span class="num" style="color:#34d399;">' + teamTotal(inn)+'/'+teamWickets(inn)+' <span style="font-size:13px;color:#94a3b8;">('+oversStr(inn)+' ov · Extras '+totalExtras+')</span></span>'
+    ));
+
+    const tableWrap = el('div', 'table-wrap');
     const table = el('table');
     const thead = el('thead');
-    thead.innerHTML = '<tr><th>Batter</th><th>Dismissal</th><th class="num">R</th><th class="num">B</th><th class="num">4s</th><th class="num">6s</th><th class="num">SR</th></tr>';
+    thead.innerHTML = '<tr><th>Batter</th><th>Status</th><th class="num">R</th><th class="num">B</th><th class="num">4s</th><th class="num">6s</th><th class="num">SR</th></tr>';
     table.appendChild(thead);
     const tbody = el('tbody');
-    const facedIds = [...new Set(inn.deliveries.map(d=>d.strikerId))];
+    const facedIds = [...new Set(inn.deliveries.map(d=>d.strikerId).concat(
+      idx === state.currentInnings ? [state.strikerId, state.nonStrikerId].filter(Boolean) : []
+    ))];
+
     battingTeam.players.concat(battingTeam.substitutes || []).filter(p=>facedIds.includes(p.id)).forEach(p=>{
       const st = battingStatsFor(inn, p.id);
       const outInfo = inn.deliveries.find(d=>d.wicket && d.wicket.dismissedId===p.id);
       let dismissal = 'not out';
       if(outInfo){
-        const fielder = outInfo.wicket.fielderId ? findPlayer(outInfo.wicket.fielderId) : null;
-        dismissal = outInfo.wicket.dismissalType + (fielder ? ' (' + (fielder.name||fielder.id) + ')' : '');
+        const fielder = outInfo.wicket.fielderId ? displayPlayerName(outInfo.wicket.fielderId) : null;
+        const bowler = outInfo.bowlerId ? displayPlayerName(outInfo.bowlerId) : null;
+        if (outInfo.wicket.dismissalType === 'Caught') {
+          dismissal = 'c ' + (fielder || 'sub') + ' b ' + (bowler || '');
+        } else if (outInfo.wicket.dismissalType === 'Bowled') {
+          dismissal = 'b ' + (bowler || '');
+        } else if (outInfo.wicket.dismissalType === 'LBW') {
+          dismissal = 'lbw b ' + (bowler || '');
+        } else if (outInfo.wicket.dismissalType === 'Stumped') {
+          dismissal = 'st ' + (fielder || 'wk') + ' b ' + (bowler || '');
+        } else {
+          dismissal = outInfo.wicket.dismissalType + (fielder ? ' (' + fielder + ')' : '');
+        }
       }
+      const isAtCrease = idx === state.currentInnings && !outInfo && (p.id === state.strikerId || p.id === state.nonStrikerId);
       const tr = el('tr');
-      tr.innerHTML = '<td style="font-weight:600;color:#ffffff;">'+(p.name||p.id)+'</td><td class="dismissal">'+dismissal+'</td>'+
+      tr.innerHTML =
+        '<td style="font-weight:700;color:' + (isAtCrease ? '#34d399' : '#ffffff') + ';">' +
+          displayPlayerName(p.id) + (p.id === state.strikerId && isAtCrease ? ' ★' : '') +
+        '</td>' +
+        '<td class="dismissal">' + dismissal + '</td>' +
         '<td class="num" style="font-weight:700;color:#34d399;">'+st.runs+'</td><td class="num">'+st.balls+'</td>'+
         '<td class="num">'+st.fours+'</td><td class="num">'+st.sixes+'</td><td class="num">'+st.sr+'</td>';
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
-    paper.appendChild(table);
+    tableWrap.appendChild(table);
+    paper.appendChild(tableWrap);
+
+    /* Phase Breakdown Cards */
+    const phases = computePhases(inn).filter(ph => ph.balls > 0);
+    if (phases.length) {
+      paper.appendChild(el('div', 'team-list-title', 'Scoring by Match Phase'));
+      const pGrid = el('div', 'phase-grid');
+      phases.forEach(ph => {
+        const pc = el('div', 'phase-card');
+        const rr = (ph.runs / (ph.balls / 6)).toFixed(2);
+        pc.innerHTML =
+          '<div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;">' + ph.name + '</div>' +
+          '<div class="num" style="font-size:18px;font-weight:800;color:#f8fafc;margin-top:4px;">' + ph.runs + '/' + ph.wkts + ' <span style="font-size:12px;color:#34d399;">(RR ' + rr + ')</span></div>';
+        pGrid.appendChild(pc);
+      });
+      paper.appendChild(pGrid);
+    }
 
     if(inn.fow.length){
-      paper.appendChild(el('div','team-list-title','Fall of wickets'));
-      const fowLine = inn.fow.map(f=> f.score+'-'+(inn.fow.indexOf(f)+1)+' ('+f.player+', '+f.over+' ov)').join('  ·  ');
+      paper.appendChild(el('div','team-list-title','Fall of Wickets'));
+      const fowLine = inn.fow.map((f, i)=> f.score+'-'+(i+1)+' ('+f.player+', '+f.over+' ov)').join('  ·  ');
       paper.appendChild(el('div','fow-row', fowLine));
     }
 
+    /* Partnerships */
+    const parts = computePartnerships(inn);
+    if (parts.length) {
+      paper.appendChild(el('div', 'team-list-title', 'Partnerships'));
+      const partWrap = el('div', 'fow-row');
+      partWrap.innerHTML = parts.map((pt, pIdx) =>
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:' + (pIdx === parts.length - 1 ? 'none' : '1px solid #1e293b') + ';">' +
+          '<span><strong style="color:#f8fafc;">' + (pIdx + 1) + '.</strong> ' + pt.batters + (pt.unbroken ? ' <span style="color:#34d399;font-size:11px;">(unbroken)</span>' : '') + '</span>' +
+          '<span class="num" style="color:#38bdf8;font-weight:700;">' + pt.runs + ' (' + pt.balls + 'b)</span>' +
+        '</div>'
+      ).join('');
+      paper.appendChild(partWrap);
+    }
+
     paper.appendChild(el('div','team-list-title','Bowling — '+bowlingTeam.name));
+    const bWrap = el('div', 'table-wrap');
     const btable = el('table');
     const bthead = el('thead');
     bthead.innerHTML = '<tr><th>Bowler</th><th class="num">O</th><th class="num">M</th><th class="num">R</th><th class="num">W</th><th class="num">Econ</th></tr>';
@@ -1929,29 +3806,14 @@ function renderViewer(){
     bowlingTeam.players.concat(bowlingTeam.substitutes || []).filter(p=>bowledIds.includes(p.id)).forEach(p=>{
       const bs = bowlingStatsFor(inn, p.id);
       const tr = el('tr');
-      tr.innerHTML = '<td style="font-weight:600;color:#ffffff;">'+(p.name||p.id)+'</td><td class="num">'+bs.overs+'</td><td class="num">'+bs.maidens+'</td><td class="num">'+bs.runs+'</td><td class="num" style="font-weight:700;color:#38bdf8;">'+bs.wkts+'</td><td class="num">'+bs.econ+'</td>';
+      tr.innerHTML = '<td style="font-weight:700;color:#ffffff;">'+displayPlayerName(p.id)+'</td><td class="num">'+bs.overs+'</td><td class="num">'+bs.maidens+'</td><td class="num">'+bs.runs+'</td><td class="num" style="font-weight:700;color:#38bdf8;">'+bs.wkts+'</td><td class="num">'+bs.econ+'</td>';
       btbody.appendChild(tr);
     });
     btable.appendChild(btbody);
-    paper.appendChild(btable);
+    bWrap.appendChild(btable);
+    paper.appendChild(bWrap);
     frag.appendChild(paper);
   });
-
-  const worm = buildWormChart();
-  if(worm){
-    const wormPaper = el('div','paper');
-    wormPaper.appendChild(el('h3','Run progression'));
-    const legend = el('div','', worm.dataSets.map(ds=>
-      '<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:12px;color:#cbd5e1;font-weight:600;">'+
-      '<span style="width:12px;height:12px;border-radius:3px;background:'+ds.color+';display:inline-block;"></span>'+ds.label+'</span>'
-    ).join(''));
-    legend.style.marginBottom = '12px';
-    wormPaper.appendChild(legend);
-    const svgWrap = el('div');
-    svgWrap.innerHTML = worm.svg;
-    wormPaper.appendChild(svgWrap);
-    frag.appendChild(wormPaper);
-  }
 
   if(state.matchComplete && state.innings.length===2){
     const inn1 = state.innings[0], inn2 = state.innings[1];
@@ -1962,16 +3824,36 @@ function renderViewer(){
     if(t2>t1) text = (team2.name||'Team 2')+' won by '+(10-teamWickets(inn2))+' wickets';
     else if(t1>t2) text = (team1.name||'Team 1')+' won by '+(t1-t2)+' runs';
     else text = 'Match tied';
-    summary.appendChild(el('h3','Result'));
-    summary.appendChild(el('div','', '<span style="font-size:18px;font-weight:700;color:#fbbf24;">'+text+'</span>'));
-    const shareBtn = el('button','btn btn-primary','Share Scorecard Image');
-    shareBtn.style.marginTop = '16px';
+    summary.appendChild(el('h3','Official Match Result'));
+    summary.appendChild(el('div','', '<span style="font-size:20px;font-weight:800;color:#fbbf24;">🏆 '+text+'</span>'));
+    const btnRow = el('div', '');
+    btnRow.style.display = 'flex';
+    btnRow.style.flexWrap = 'wrap';
+    btnRow.style.gap = '10px';
+    btnRow.style.marginTop = '16px';
+    const shareBtn = el('button','btn btn-primary','📸 Download / Share Scorecard Poster');
+    shareBtn.type = 'button';
     shareBtn.onclick = ()=>{ shareScorecardImage(); };
-    summary.appendChild(shareBtn);
+    btnRow.appendChild(shareBtn);
+
+    const jsonBtn = el('button', 'btn btn-ghost', '💾 Export Match JSON');
+    jsonBtn.type = 'button';
+    jsonBtn.onclick = () => exportMatchJson();
+    btnRow.appendChild(jsonBtn);
+    summary.appendChild(btnRow);
     frag.appendChild(summary);
-  } else if(state.innings.length===2 && !state.matchComplete){
+  } else if(state.innings.length > 0 && !state.matchComplete){
     const paper = el('div','paper');
-    paper.appendChild(el('div','empty-note','Match in progress — result will appear once the second innings finishes.'));
+    paper.style.display = 'flex';
+    paper.style.flexWrap = 'wrap';
+    paper.style.justifyContent = 'space-between';
+    paper.style.alignItems = 'center';
+    paper.style.gap = '12px';
+    paper.appendChild(el('div','empty-note','Match in progress — official result will lock once the second innings concludes.'));
+    const posterNow = el('button', 'btn btn-ghost', '📸 Save Live Scorecard Image');
+    posterNow.type = 'button';
+    posterNow.onclick = () => shareScorecardImage();
+    paper.appendChild(posterNow);
     frag.appendChild(paper);
   }
 
@@ -1984,12 +3866,14 @@ function renderViewer(){
 }
 
 (function prefillFromUrl(){
-  const params = new URLSearchParams(window.location.search);
-  const codeParam = params.get('code');
-  if(codeParam){
-    state.tempCode = codeParam.toUpperCase();
-    state.tempRole = 'viewer';
-  }
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const codeParam = params.get('code');
+    if(codeParam){
+      state.tempCode = codeParam.toUpperCase();
+      state.tempRole = 'viewer';
+    }
+  } catch (e) {}
 })();
 render();
 </script>

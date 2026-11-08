@@ -2,64 +2,161 @@
 <html lang="en" class="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Terms and Conditions — Scoreboard</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Terms and Conditions — Scoreboard Live Cricket Scorer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'%3E%3Crect width='64' height='64' rx='16' fill='%23060B14'/%3E%3Crect x='2' y='2' width='60' height='60' rx='14' stroke='%2310B981' stroke-width='2.5' stroke-opacity='0.4'/%3E%3Ccircle cx='32' cy='32' r='18' fill='%2310B981' fill-opacity='0.15' stroke='%2310B981' stroke-width='3'/%3E%3Cpath d='M21 21C27 27 27 37 21 43' stroke='%2334D399' stroke-width='2.5' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Cpath d='M43 21C37 27 37 37 43 43' stroke='%2334D399' stroke-width='2.5' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Cline x1='18' y1='46' x2='46' y2='18' stroke='%23F8FAFC' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background-color: #060b14;
+    color: #e2e8f0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    max-width: 100vw;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num { font-family: 'Space Mono', monospace; }
+  .container-shell { max-width: 820px; margin: 0 auto; padding: 20px 16px 64px; }
+  .topbar {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;
+    background: rgba(15, 23, 42, 0.9); border: 1px solid #1e293b; border-radius: 16px;
+    padding: 14px 20px; margin-bottom: 24px; backdrop-filter: blur(12px);
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.5);
+  }
+  .brand-link {
+    display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+    color: #ffffff; font-weight: 800; font-size: 18px; letter-spacing: -0.02em;
+    background: transparent; border: none; padding: 0; cursor: pointer;
+  }
+  .brand-link:hover .brand-title { color: #34d399; }
+  .brand-emblem {
+    width: 32px; height: 32px; border-radius: 9px; background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(16, 185, 129, 0.35); display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .btn-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: #34d399;
+    background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 8px 14px; border-radius: 10px; cursor: pointer; text-decoration: none;
+    transition: all 0.15s ease;
+  }
+  .btn-back:hover { background: rgba(16, 185, 129, 0.18); border-color: #10b981; color: #6ee7b7; }
+  .card {
+    background: #0b1220; border: 1px solid #1e293b; border-radius: 18px;
+    padding: 28px 24px; box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.6);
+  }
+  .section-block {
+    padding: 18px 0; border-bottom: 1px solid rgba(30, 41, 59, 0.7);
+  }
+  .section-block:last-child { border-bottom: none; padding-bottom: 0; }
+  h1 { font-size: clamp(22px, 4vw, 28px); font-weight: 800; color: #ffffff; margin: 0; letter-spacing: -0.02em; }
+  h2 { font-size: 15px; font-weight: 700; color: #34d399; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  p, li { font-size: 14px; line-height: 1.65; color: #cbd5e1; margin: 0; }
+  ul { margin: 8px 0 0; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #38bdf8; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25);
+    padding: 4px 10px; border-radius: 6px; margin-bottom: 10px;
+  }
+  .footer-bar {
+    margin-top: 28px; padding-top: 18px; border-top: 1px solid #1e293b;
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;
+    font-size: 12px; color: #64748b;
+  }
+  .footer-nav { display: flex; flex-wrap: wrap; gap: 16px; }
+  .footer-btn {
+    background: none; border: none; padding: 0; color: #94a3b8; font-size: 12px;
+    font-weight: 500; cursor: pointer; text-decoration: none;
+  }
+  .footer-btn:hover { color: #34d399; }
+  @media (max-width: 640px) {
+    .card { padding: 20px 16px; }
+    .topbar { padding: 12px 14px; }
+  }
+</style>
 </head>
-<body class="bg-slate-950 text-slate-200 font-['Inter',sans-serif] min-h-screen antialiased">
-<div class="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-20">
-  <div class="flex justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl px-5 py-4 mb-6 shadow-lg">
-    <div class="text-lg font-extrabold tracking-tight text-white">SCOREBOARD <span class="text-emerald-400">·</span> <span class="text-slate-400 font-medium text-sm">live cricket scorer</span></div>
-    <a class="text-xs font-semibold text-emerald-400 hover:text-emerald-300 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 transition" href="index.html">← Back to app</a>
-  </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5">
-    <div class="border-b border-slate-800 pb-4">
-      <h1 class="text-2xl font-bold text-white">Terms and Conditions</h1>
-      <div class="text-xs text-slate-400 mt-1">Last updated: 15 September 2026</div>
+<body>
+<div class="container-shell">
+  <header class="topbar">
+    <button type="button" class="brand-link" onclick="navigateToApp('index')" title="Return to Scoreboard Home">
+      <span class="brand-emblem">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 8.5c2 2 2 5 0 7"/><path d="M15.5 8.5c-2 2-2 5 0 7"/></svg>
+      </span>
+      <span><span class="brand-title">SCOREBOARD</span> <span style="color:#34d399;">·</span> <span style="color:#94a3b8;font-weight:500;font-size:13px;">live cricket scorer</span></span>
+    </button>
+    <button type="button" class="btn-back" onclick="navigateToApp('index')">← Back to Scoreboard</button>
+  </header>
+
+  <main class="card">
+    <div style="border-bottom:1px solid #1e293b;padding-bottom:18px;margin-bottom:6px;">
+      <div class="badge">Platform Usage Agreement</div>
+      <h1>Terms and Conditions</h1>
+      <div style="font-size:12px;color:#64748b;margin-top:6px;">Effective &amp; Last Updated: November 2026</div>
     </div>
 
-    <div>
-      <h2 class="text-base font-bold text-emerald-400 mb-2">What this is</h2>
-      <p class="text-sm leading-relaxed text-slate-300">This is a free scoring tool for informal and club-level cricket matches, provided as-is with no cost and no guarantees. By using it, you agree to the terms below.</p>
+    <div class="section-block">
+      <h2>1. Overview &amp; Acceptance</h2>
+      <p>Scoreboard is a live cricket scoring and broadcast utility built for clubs, schools, leagues, and community tournaments. By accessing or using Scoreboard as a Scorer (Admin) or Viewer, you agree to these Terms and Conditions.</p>
     </div>
 
-    <div>
-      <h2 class="text-base font-bold text-emerald-400 mb-2">No warranty</h2>
-      <p class="text-sm leading-relaxed text-slate-300">This tool is provided without warranty of any kind. It relies on a third-party service (Firebase) for live syncing between devices, and its availability, speed, and uptime are not guaranteed. It is not built or intended for official, professional, or contractual scoring of matches where accuracy needs to be guaranteed.</p>
-    </div>
-
-    <div>
-      <h2 class="text-base font-bold text-emerald-400 mb-2">Your responsibility</h2>
-      <ul class="list-disc pl-5 space-y-1.5 text-sm text-slate-300 leading-relaxed">
-        <li>The accuracy of any score, player name, or match detail entered is the responsibility of whoever is scoring the match — this tool does not verify or adjudicate cricket rules or disputes.</li>
-        <li>Anyone with a match code can view that match's live scoreboard. Only share a match code as widely as you're comfortable with.</li>
-        <li>The scorer password protects a match from accidental or casual access to its scoring controls. It is a convenience safeguard, not a full identity or account security system, and should not be relied on to prevent a determined, technically capable person from misusing a shared match code.</li>
+    <div class="section-block">
+      <h2>2. Scorer &amp; Viewer Responsibilities</h2>
+      <ul>
+        <li><strong style="color:#f8fafc;">Scoring Accuracy:</strong> The designated match scorer is solely responsible for verifying runs, extras, wickets, bowler limits, and match results. Scoreboard automates cricket rules (strike rotation, over limits, free hits) as an aid, not as an official match referee.</li>
+        <li><strong style="color:#f8fafc;">Match Code Sharing:</strong> Anyone with a valid 5-character match code can view the live scoreboard and analytics for that match. Share your match code or QR invite only with intended spectators and players.</li>
+        <li><strong style="color:#f8fafc;">Scorer Password Protection:</strong> The match password prevents accidental viewer edits and allows scorers to reconnect across sessions. Keep your scorer password confidential during active play.</li>
       </ul>
     </div>
 
-    <div>
-      <h2 class="text-base font-bold text-emerald-400 mb-2">Acceptable use</h2>
-      <p class="text-sm leading-relaxed text-slate-300">Don't use team names, player names, venue fields, or any other input in this tool to store or transmit unlawful, abusive, or harassing content.</p>
+    <div class="section-block">
+      <h2>3. Acceptable Use Conduct</h2>
+      <p>Users must not enter unlawful, defamatory, abusive, or harassing text into team names, player rosters, venue fields, or match status notes. Automated scraping or flooding of the real-time database is strictly prohibited.</p>
     </div>
 
-    <div>
-      <h2 class="text-base font-bold text-emerald-400 mb-2">Limitation of liability</h2>
-      <p class="text-sm leading-relaxed text-slate-300">This tool is offered free of charge as a community utility. To the fullest extent permitted by law, its creator is not liable for any loss, dispute, or damage arising from its use, including lost or inaccurate match data.</p>
+    <div class="section-block">
+      <h2>4. Service Availability &amp; No Warranty</h2>
+      <p>Scoreboard is provided "as is" and "as available" without warranties of any kind. Real-time synchronization depends on Firebase infrastructure and local mobile connectivity. We recommend exporting a JSON backup or HD Scorecard image from the Pause Menu at the conclusion of important fixtures.</p>
     </div>
 
-    <div>
-      <h2 class="text-base font-bold text-emerald-400 mb-2">Changes to these terms</h2>
-      <p class="text-sm leading-relaxed text-slate-300">These terms may be updated from time to time. Continuing to use the tool after a change means you accept the updated terms.</p>
+    <div class="section-block">
+      <h2>5. Limitation of Liability</h2>
+      <p>To the maximum extent permitted by applicable law, the authors and maintainers of Scoreboard shall not be liable for any indirect, incidental, or consequential damages arising from lost match data, connectivity interruptions, or scoring disputes.</p>
     </div>
 
-    <div>
-      <h2 class="text-base font-bold text-emerald-400 mb-2">Contact</h2>
-      <p class="text-sm leading-relaxed text-slate-300">Questions about these terms can be sent to the site owner at the contact details listed on the main page.</p>
+    <div class="section-block">
+      <h2>6. Updates &amp; Contact</h2>
+      <p>These terms may be revised periodically to reflect new scoring features. Questions regarding these Terms can be directed via the repository issue tracker or the in-app <strong style="color:#f8fafc;">Match Menu → Help &amp; Info</strong> dialog.</p>
     </div>
-  </div>
+  </main>
+
+  <footer class="footer-bar">
+    <span>&copy; <span id="yr">2026</span> Scoreboard Live Cricket Scorer. All rights reserved.</span>
+    <div class="footer-nav">
+      <button type="button" class="footer-btn" onclick="navigateToApp('index')">Live Scorer App</button>
+      <button type="button" class="footer-btn" onclick="navigateToApp('privacy')">Privacy Policy</button>
+      <button type="button" class="footer-btn" style="color:#34d399;font-weight:600;" onclick="window.scrollTo({top:0,behavior:'smooth'})">Terms &amp; Conditions</button>
+    </div>
+  </footer>
 </div>
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  function navigateToApp(page) {
+    const target = page === 'privacy' ? ('privacy' + '.html') : ('index' + '.html');
+    try {
+      window.location.href = target;
+    } catch (e) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+</script>
 </body>
 </html>
